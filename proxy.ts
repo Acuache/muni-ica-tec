@@ -53,19 +53,24 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Con sesión en /primer-ingreso: si ya completó el primer ingreso → panel del rol
-  if (user && panel && path === '/primer-ingreso') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('primer_ingreso')
-      .eq('id', user.id)
-      .single()
+  // Con sesión en /primer-ingreso: si ya completó el primer ingreso → panel del rol.
+  // Si NO lo ha completado, retornar aquí para evitar caer en el bloque
+  // de "ruta de otro rol" que causaría un loop de redirecciones.
+  if (user && path === '/primer-ingreso') {
+    if (panel) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('primer_ingreso')
+        .eq('id', user.id)
+        .single()
 
-    if (profile && !profile.primer_ingreso) {
-      const url = request.nextUrl.clone()
-      url.pathname = panel
-      return NextResponse.redirect(url)
+      if (profile && !profile.primer_ingreso) {
+        const url = request.nextUrl.clone()
+        url.pathname = panel
+        return NextResponse.redirect(url)
+      }
     }
+    return supabaseResponse
   }
 
   // Con sesión en ruta pública → panel del rol
