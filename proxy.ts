@@ -7,7 +7,7 @@ const PANEL: Record<string, string> = {
   jefe: '/jefe',
 }
 
-const PROTECTED = ['/trabajador', '/tecnico', '/jefe']
+const PROTECTED = ['/trabajador', '/tecnico', '/jefe', '/primer-ingreso']
 
 export default async function proxy(request: NextRequest) {
   // supabaseResponse must be returned (or its cookies copied) on every path
@@ -51,6 +51,21 @@ export default async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Con sesión en /primer-ingreso: si ya completó el primer ingreso → panel del rol
+  if (user && panel && path === '/primer-ingreso') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('primer_ingreso')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && !profile.primer_ingreso) {
+      const url = request.nextUrl.clone()
+      url.pathname = panel
+      return NextResponse.redirect(url)
+    }
   }
 
   // Con sesión en ruta pública → panel del rol

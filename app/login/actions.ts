@@ -39,5 +39,15 @@ export async function login(
     return { error: 'Rol de usuario no reconocido. Contacta al administrador.' }
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('primer_ingreso')
+    .eq('id', data.user.id)
+    .single()
+
+  if (profile?.primer_ingreso) {
+    redirect('/primer-ingreso')
+  }
+
   redirect(panel)
 }

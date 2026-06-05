@@ -1,6 +1,21 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/actions/auth'
 
-export default function TecnicoPage() {
+export default async function TecnicoPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('primer_ingreso')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.primer_ingreso) redirect('/primer-ingreso')
+
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-zinc-50 px-4 py-12">
       <div className="w-full max-w-sm text-center">

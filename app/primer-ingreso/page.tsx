@@ -1,25 +1,47 @@
 'use client'
 
 import { useActionState } from 'react'
-import { login } from './actions'
+import { completarPrimerIngreso } from './actions'
 
-export default function LoginPage() {
-  const [state, action, pending] = useActionState(login, undefined)
+export default function PrimerIngresoPage() {
+  const [state, action, pending] = useActionState(completarPrimerIngreso, undefined)
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-zinc-50 px-4 py-12">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-semibold tracking-tight text-zinc-900">
-          Soporte Municipal
+        <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900">
+          Bienvenido
         </h1>
+        <p className="mb-8 text-center text-sm text-zinc-500">
+          Antes de continuar, registra tu teléfono y confirma tu correo para
+          poder recuperar tu contraseña en el futuro.
+        </p>
 
         <form action={action} className="space-y-4">
+          <div>
+            <label
+              htmlFor="telefono"
+              className="block text-sm font-medium text-zinc-700"
+            >
+              Teléfono
+            </label>
+            <input
+              id="telefono"
+              name="telefono"
+              type="tel"
+              autoComplete="tel"
+              required
+              className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+              placeholder="987 654 321"
+            />
+          </div>
+
           <div>
             <label
               htmlFor="email"
               className="block text-sm font-medium text-zinc-700"
             >
-              Usuario / Correo
+              Escribe tu correo para confirmarlo
             </label>
             <input
               id="email"
@@ -29,24 +51,6 @@ export default function LoginPage() {
               required
               className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
               placeholder="correo@muni-ica.gob.pe"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-zinc-700"
-            >
-              Contraseña
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-              placeholder="••••••••"
             />
           </div>
 
@@ -61,18 +65,9 @@ export default function LoginPage() {
             disabled={pending}
             className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? 'Ingresando…' : 'Ingresar'}
+            {pending ? 'Guardando…' : 'Confirmar y continuar'}
           </button>
         </form>
-
-        <p className="mt-4 text-center text-sm text-zinc-500">
-          <a
-            href="/solicitar-recuperacion"
-            className="text-zinc-700 underline underline-offset-4 hover:text-zinc-900"
-          >
-            ¿Olvidaste tu contraseña?
-          </a>
-        </p>
       </div>
     </div>
   )
