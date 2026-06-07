@@ -1,0 +1,389 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  IconMenu2,
+  IconSearch,
+  IconBell,
+  IconHome,
+  IconUser,
+  IconRefresh,
+} from '@tabler/icons-react'
+import type { SolicitudColaJefe, TecnicoCard } from './page'
+
+type Props = {
+  esperando: number
+  solucionadosHoy: number
+  noSolucionadosHoy: number
+  cola: SolicitudColaJefe[]
+  tecnicos: TecnicoCard[]
+}
+
+function formatTiempo(ms: number): string {
+  const seg = Math.floor(ms / 1000)
+  if (seg < 60) return `hace ${seg} seg`
+  const min = Math.floor(seg / 60)
+  return `hace ${min} min`
+}
+
+export default function JefePanel({
+  esperando,
+  solucionadosHoy,
+  noSolucionadosHoy,
+  cola,
+  tecnicos,
+}: Props) {
+  const router = useRouter()
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
+  const [tiempoLabel, setTiempoLabel] = useState('ahora')
+
+  // Polling cada 3 minutos
+  useEffect(() => {
+    const id = setInterval(() => {
+      router.refresh()
+      setLastRefreshed(new Date())
+    }, 180_000)
+    return () => clearInterval(id)
+  }, [router])
+
+  // Etiqueta "actualizado hace X"
+  useEffect(() => {
+    const id = setInterval(() => {
+      const diff = Date.now() - lastRefreshed.getTime()
+      setTiempoLabel(diff < 5000 ? 'ahora' : formatTiempo(diff))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [lastRefreshed])
+
+  function handleRefresh() {
+    router.refresh()
+    setLastRefreshed(new Date())
+  }
+
+  return (
+    <div className="flex min-h-full flex-col bg-gray-50">
+      {/* Header */}
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+        <button
+          type="button"
+          aria-label="Menú"
+          className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+        >
+          <IconMenu2 size={22} />
+        </button>
+        <span className="text-base font-semibold text-gray-900">
+          Panel de Control
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Buscar"
+            className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          >
+            <IconSearch size={20} />
+          </button>
+          <button
+            type="button"
+            aria-label="Notificaciones"
+            className="relative rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          >
+            <IconBell size={20} />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          </button>
+        </div>
+      </header>
+
+      {/* Contenido principal */}
+      <main className="flex-1 overflow-y-auto px-4 py-5">
+        {/* Etiqueta de actualización + botón manual */}
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            aria-label="Refrescar"
+            className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
+          >
+            <IconRefresh size={14} />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <KpiCards
+            esperando={esperando}
+            solucionadosHoy={solucionadosHoy}
+            noSolucionadosHoy={noSolucionadosHoy}
+          />
+          <ColaEspera cola={cola} />
+          <EstadoTecnicos tecnicos={tecnicos} />
+        </div>
+      </main>
+
+      {/* Barra de navegación inferior */}
+      <nav className="flex border-t border-gray-200 bg-white">
+        <button
+          type="button"
+          className="flex flex-1 flex-col items-center gap-1 py-2 text-blue-600"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
+            <IconHome size={18} className="text-white" />
+          </div>
+          <span className="text-xs font-medium">Inicio</span>
+        </button>
+        <button
+          type="button"
+          className="flex flex-1 flex-col items-center gap-1 py-2 text-gray-400"
+        >
+          <IconUser size={22} />
+          <span className="text-xs">Perfil</span>
+        </button>
+      </nav>
+    </div>
+  )
+}
+
+// ─── Subcomponentes ────────────────────────────────────────────────────────────
+
+function KpiCards({
+  esperando,
+  solucionadosHoy,
+  noSolucionadosHoy,
+}: {
+  esperando: number
+  solucionadosHoy: number
+  noSolucionadosHoy: number
+}) {
+  const tasa =
+    solucionadosHoy + noSolucionadosHoy === 0
+      ? '—'
+      : `${Math.round((solucionadosHoy / (solucionadosHoy + noSolucionadosHoy)) * 100)}%`
+
+  return (
+    <div className="space-y-3">
+      {/* Esperando ayuda */}
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-4">
+        <div>
+          <p className="text-sm text-gray-500">Esperando ayuda</p>
+          <p className="mt-1 text-4xl font-bold text-gray-900">
+            {String(esperando).padStart(2, '0')}
+          </p>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-400">
+          <span className="text-base leading-none">···</span>
+        </div>
+      </div>
+
+      {/* Solucionados hoy */}
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-4">
+        <div>
+          <p className="text-sm text-gray-500">Solucionados hoy</p>
+          <p className="mt-1 text-4xl font-bold text-gray-900">
+            {String(solucionadosHoy).padStart(2, '0')}
+          </p>
+          <p className="mt-1 text-xs font-medium text-green-600">
+            ⊙ {tasa} tasa de éxito
+          </p>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-green-200 text-green-500">
+          <span className="text-lg leading-none">✓</span>
+        </div>
+      </div>
+
+      {/* No solucionados */}
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-4">
+        <div>
+          <p className="text-sm text-gray-500">No solucionados</p>
+          <p className="mt-1 text-4xl font-bold text-gray-900">
+            {String(noSolucionadosHoy).padStart(2, '0')}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">Requieren escalamiento</p>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400">
+          <span className="text-lg leading-none">✕</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ColaEspera({ cola }: { cola: SolicitudColaJefe[] }) {
+  const badgeClass = {
+    en_espera: 'bg-blue-100 text-blue-700',
+    en_proceso: 'bg-blue-600 text-white',
+  } as const
+
+  const badgeLabel = {
+    en_espera: 'En Espera',
+    en_proceso: 'En Proceso',
+  } as const
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="font-semibold text-gray-800">Cola de Espera</p>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        {cola.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-gray-400">
+            No hay solicitudes activas.
+          </p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
+                  Área
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
+                  Problema
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
+                  Estado
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {cola.map((s) => (
+                <tr key={s.id}>
+                  <td className="px-4 py-3 font-semibold text-gray-800">
+                    {s.area}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{s.titulo}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass[s.estado]}`}
+                    >
+                      {badgeLabel[s.estado]}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const AVATAR_COLORS = [
+  'bg-teal-500',
+  'bg-purple-500',
+  'bg-blue-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+]
+
+const ESTADO_BADGE: Record<
+  TecnicoCard['estado'],
+  { label: string; className: string }
+> = {
+  disponible: { label: 'DISPONIBLE', className: 'bg-green-500 text-white' },
+  atendiendo: { label: 'ATENDIENDO', className: 'bg-blue-500 text-white' },
+  en_oficina: { label: 'EN OFICINA', className: 'bg-gray-400 text-white' },
+  virtual:    { label: 'VIRTUAL',    className: 'bg-gray-400 text-white' },
+  descanso:   { label: 'DESCANSO',   className: 'bg-gray-400 text-white' },
+}
+
+function EstadoTecnicos({ tecnicos }: { tecnicos: TecnicoCard[] }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="font-semibold text-gray-800">Estado Técnicos</p>
+        <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="h-2 w-2 rounded-full bg-green-500" />
+          En Vivo
+        </span>
+      </div>
+      <div className="space-y-3">
+        {tecnicos.map((t, i) => (
+          <TecnicoCardItem key={t.id} tecnico={t} colorIndex={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TecnicoCardItem({
+  tecnico,
+  colorIndex,
+}: {
+  tecnico: TecnicoCard
+  colorIndex: number
+}) {
+  const [tiempoAct, setTiempoAct] = useState(() =>
+    formatTiempoAct(tecnico.updatedAt),
+  )
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTiempoAct(formatTiempoAct(tecnico.updatedAt))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [tecnico.updatedAt])
+
+  const initials = tecnico.username
+    .split(/[\s_]/)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .slice(0, 2)
+    .join('')
+
+  const colorClass = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length]
+  const badge = ESTADO_BADGE[tecnico.estado]
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${colorClass}`}
+          >
+            {initials}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{tecnico.username}</p>
+            <span
+              className={`mt-0.5 inline-block rounded px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          </div>
+        </div>
+        <span className="text-xs text-gray-400">{tiempoAct}</span>
+      </div>
+
+      <div className="mt-3 space-y-1 text-xs text-gray-500">
+        {tecnico.ubicacion && (
+          <p className="flex items-center gap-1">
+            <span>📍</span>
+            {tecnico.ubicacion}
+          </p>
+        )}
+        {tecnico.estado === 'atendiendo' ? (
+          <p className="flex items-center gap-1">
+            <span>👤</span>
+            Ayudando a:{' '}
+            <span className="font-medium text-gray-700">
+              {tecnico.trabajadorUsername ?? '—'}
+            </span>
+          </p>
+        ) : (
+          <p className="flex items-center gap-1">
+            <span>🕐</span>
+            Último ticket: {tiempoAct}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function formatTiempoAct(updatedAt: string): string {
+  const ms = Date.now() - new Date(updatedAt).getTime()
+  const seg = Math.floor(ms / 1000)
+  if (seg < 60) return `${seg}s act.`
+  const min = Math.floor(seg / 60)
+  return `${min}m act.`
+}
