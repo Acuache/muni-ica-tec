@@ -46,8 +46,8 @@ export default async function proxy(request: NextRequest) {
   const isProtected = PROTECTED.some((p) => path.startsWith(p))
   const isPublic = path === '/' || path === '/login'
 
-  // Sin sesión intentando acceder a ruta protegida → /login
-  if (!user && isProtected) {
+  // Sin sesión intentando acceder a ruta protegida o a la raíz → /login
+  if (!user && (isProtected || path === '/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
