@@ -31,19 +31,23 @@ export default async function TrabajadorPage() {
   ])
 
   let posicionCola = 0
-  let tecnicos: { id: string; username: string }[] = []
+  let tecnicoNombre: string | null = null
 
   if (solicitudActiva) {
-    const [{ data: posicion }, { data: tecnicosData }] = await Promise.all([
+    const tecnicoQuery = solicitudActiva.tecnico_id
+      ? supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', solicitudActiva.tecnico_id)
+          .single()
+      : null
+
+    const [{ data: posicion }, tecnicoResult] = await Promise.all([
       supabase.rpc('get_posicion_en_cola', { p_solicitud_id: solicitudActiva.id }),
-      supabase
-        .from('profiles')
-        .select('id, username')
-        .eq('rol', 'tecnico')
-        .order('username'),
+      tecnicoQuery,
     ])
     posicionCola = posicion ?? 0
-    tecnicos = tecnicosData ?? []
+    tecnicoNombre = tecnicoResult?.data?.username ?? null
   }
 
   return (
@@ -52,7 +56,7 @@ export default async function TrabajadorPage() {
       areas={areas ?? []}
       solicitudActiva={solicitudActiva ?? null}
       posicionCola={posicionCola}
-      tecnicos={tecnicos}
+      tecnicoNombre={tecnicoNombre}
     />
   )
 }

@@ -64,11 +64,9 @@ export async function confirmarResolucion(
   formData: FormData,
 ): Promise<ActionState> {
   const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  const tecnicoId = (formData.get('tecnico_id') as string | null) ?? ''
   const resultado = (formData.get('resultado') as string | null) ?? ''
 
   if (!solicitudId) return { error: 'Solicitud no identificada.' }
-  if (!tecnicoId) return { error: 'Selecciona quién te ayudó.' }
   if (resultado !== 'solucionado' && resultado !== 'no_solucionado') {
     return { error: 'Resultado no válido.' }
   }
@@ -79,7 +77,7 @@ export async function confirmarResolucion(
 
   const { error } = await supabase
     .from('solicitudes')
-    .update({ estado: resultado, tecnico_id: tecnicoId })
+    .update({ estado: resultado })
     .eq('id', solicitudId)
     .eq('trabajador_id', user.id)
     .eq('estado', 'en_proceso')

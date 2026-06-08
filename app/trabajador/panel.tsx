@@ -26,14 +26,12 @@ type Solicitud = {
   tecnico_id: string | null
   created_at: string
 }
-type Tecnico = { id: string; username: string }
-
 type Props = {
   username: string
   areas: Area[]
   solicitudActiva: Solicitud | null
   posicionCola: number
-  tecnicos: Tecnico[]
+  tecnicoNombre: string | null
 }
 
 function formatTiempo(ms: number): string {
@@ -48,7 +46,7 @@ export default function TrabajadorPanel({
   areas,
   solicitudActiva,
   posicionCola,
-  tecnicos,
+  tecnicoNombre,
 }: Props) {
   const router = useRouter()
   const inicial = username.charAt(0).toUpperCase()
@@ -130,7 +128,7 @@ export default function TrabajadorPanel({
           <PantallaSeguimiento
             solicitud={solicitudActiva}
             posicionCola={posicionCola}
-            tecnicos={tecnicos}
+            tecnicoNombre={tecnicoNombre}
             onRefresh={() => router.refresh()}
           />
         ) : (
@@ -260,12 +258,12 @@ function FormularioNuevaSolicitud({ areas }: { areas: Area[] }) {
 function PantallaSeguimiento({
   solicitud,
   posicionCola,
-  tecnicos,
+  tecnicoNombre,
   onRefresh,
 }: {
   solicitud: Solicitud
   posicionCola: number
-  tecnicos: Tecnico[]
+  tecnicoNombre: string | null
   onRefresh: () => void
 }) {
   return (
@@ -277,8 +275,7 @@ function PantallaSeguimiento({
       {solicitud.estado === 'en_proceso' && (
         <CardResolucion
           solicitudId={solicitud.id}
-          tecnicoAsignadoId={solicitud.tecnico_id}
-          tecnicos={tecnicos}
+          tecnicoNombre={tecnicoNombre}
           onRefresh={onRefresh}
         />
       )}
@@ -288,13 +285,11 @@ function PantallaSeguimiento({
 
 function CardResolucion({
   solicitudId,
-  tecnicoAsignadoId,
-  tecnicos,
+  tecnicoNombre,
   onRefresh,
 }: {
   solicitudId: string
-  tecnicoAsignadoId: string | null
-  tecnicos: Tecnico[]
+  tecnicoNombre: string | null
   onRefresh: () => void
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -310,9 +305,6 @@ function CardResolucion({
     wasPendingRef.current = pending
   }, [pending, state, onRefresh])
 
-  const selectClass =
-    'mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
-
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <p className="font-semibold text-gray-800">¿Se ha resuelto el problema?</p>
@@ -323,25 +315,10 @@ function CardResolucion({
       <form action={action} className="mt-4 space-y-4">
         <input type="hidden" name="solicitud_id" value={solicitudId} />
 
-        <div>
-          <label htmlFor="tecnico_id" className="block text-sm font-medium text-gray-700">
-            ¿Quién te ayudó?
-          </label>
-          <select
-            id="tecnico_id"
-            name="tecnico_id"
-            required
-            defaultValue={tecnicoAsignadoId ?? ''}
-            className={selectClass}
-          >
-            <option value="">— Selecciona un técnico —</option>
-            {tecnicos.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.username}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className="text-sm text-gray-700">
+          El caso fue tomado por el técnico{' '}
+          <span className="font-semibold text-gray-900">{tecnicoNombre}</span>
+        </p>
 
         {state?.error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
