@@ -1,6 +1,6 @@
 # SPEC 07d — Perfil propio y cierre de sesión
 
-> **Estado:** Aprobado · **Depende de:** SPEC 03, SPEC 05, SPEC 06, SPEC 07 · **Fecha:** 2026-06-08
+> **Estado:** Implementado · **Depende de:** SPEC 03, SPEC 05, SPEC 06, SPEC 07 · **Fecha:** 2026-06-08
 > **Objetivo:** Que trabajadores, técnicos y el jefe puedan ver, desde la
 > pestaña "Perfil" de su panel, una pantalla de solo lectura con sus datos
 > básicos (username, DNI, teléfono, correo y rol), y cerrar sesión desde un

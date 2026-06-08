@@ -12,5 +12,13 @@ export default async function JefeLayout({
 
   if (!user) redirect('/login')
 
-  return <JefeShell>{children}</JefeShell>
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)
+    .single()
+
+  return (
+    <JefeShell username={profile?.username ?? ''}>{children}</JefeShell>
+  )
 }

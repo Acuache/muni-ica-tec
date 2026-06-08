@@ -1,6 +1,6 @@
 # SPEC 07b — Trabajador: mensaje cuando es el primero en la cola
 
-> **Estado:** Aprobado · **Depende de:** SPEC 05 · **Fecha:** 2026-06-08
+> **Estado:** Implementado · **Depende de:** SPEC 05 · **Fecha:** 2026-06-08
 > **Objetivo:** Que el trabajador vea, cuando es el primero en la fila de espera
 > (0 personas antes que él), el mensaje "Eres el primero en la cola. Un técnico
 > te atenderá en unos momentos." en lugar de "Hay 0 personas esperando antes que
