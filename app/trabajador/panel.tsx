@@ -380,13 +380,20 @@ function CardPosicionCola({ posicion }: { posicion: number }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 text-center">
       <IconUsersGroup size={40} className="mx-auto mb-3 text-blue-500" />
-      <p className="text-sm text-gray-700">
-        Hay{' '}
-        <span className="font-bold text-blue-700">
-          {posicion} {posicion === 1 ? 'persona' : 'personas'}
-        </span>{' '}
-        esperando antes que tú
-      </p>
+      {posicion === 0 ? (
+        <p className="text-sm text-gray-700">
+          <span className="font-bold text-blue-700">Eres el primero en la cola.</span>{' '}
+          Un técnico te atenderá en unos momentos.
+        </p>
+      ) : (
+        <p className="text-sm text-gray-700">
+          Hay{' '}
+          <span className="font-bold text-blue-700">
+            {posicion} {posicion === 1 ? 'persona' : 'personas'}
+          </span>{' '}
+          esperando antes que tú
+        </p>
+      )}
     </div>
   )
 }
