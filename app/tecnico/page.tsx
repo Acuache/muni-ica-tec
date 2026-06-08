@@ -32,7 +32,7 @@ export default async function TecnicoPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('primer_ingreso, username')
+    .select('primer_ingreso')
     .eq('id', user.id)
     .single()
 
@@ -106,7 +106,6 @@ export default async function TecnicoPage() {
 
   return (
     <TecnicoPanel
-      username={profile?.username ?? ''}
       estadoTecnico={estadoTecnico}
       esperando={esperando ?? 0}
       finalizadasHoy={finalizadasHoy ?? 0}

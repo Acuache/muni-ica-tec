@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  IconMenu2,
-  IconSearch,
-  IconBell,
-  IconHome,
-  IconUser,
-  IconRefresh,
-} from '@tabler/icons-react'
+import { IconRefresh } from '@tabler/icons-react'
 import type { SolicitudColaJefe, TecnicoCard } from './page'
 
 type Props = {
@@ -62,84 +55,30 @@ export default function JefePanel({
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-gray-50">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+    <>
+      {/* Etiqueta de actualización + botón manual */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
         <button
           type="button"
-          aria-label="Menú"
-          className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          onClick={handleRefresh}
+          aria-label="Refrescar"
+          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
         >
-          <IconMenu2 size={22} />
+          <IconRefresh size={14} />
         </button>
-        <span className="text-base font-semibold text-gray-900">
-          Panel de Control
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Buscar"
-            className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
-          >
-            <IconSearch size={20} />
-          </button>
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            className="relative rounded-md p-1 text-gray-500 hover:bg-gray-100"
-          >
-            <IconBell size={20} />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-          </button>
-        </div>
-      </header>
+      </div>
 
-      {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto px-4 py-5">
-        {/* Etiqueta de actualización + botón manual */}
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            aria-label="Refrescar"
-            className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-          >
-            <IconRefresh size={14} />
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          <KpiCards
-            esperando={esperando}
-            solucionadosHoy={solucionadosHoy}
-            noSolucionadosHoy={noSolucionadosHoy}
-          />
-          <ColaEspera cola={cola} />
-          <EstadoTecnicos tecnicos={tecnicos} />
-        </div>
-      </main>
-
-      {/* Barra de navegación inferior */}
-      <nav className="flex border-t border-gray-200 bg-white">
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-blue-600"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-            <IconHome size={18} className="text-white" />
-          </div>
-          <span className="text-xs font-medium">Inicio</span>
-        </button>
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-gray-400"
-        >
-          <IconUser size={22} />
-          <span className="text-xs">Perfil</span>
-        </button>
-      </nav>
-    </div>
+      <div className="space-y-6">
+        <KpiCards
+          esperando={esperando}
+          solucionadosHoy={solucionadosHoy}
+          noSolucionadosHoy={noSolucionadosHoy}
+        />
+        <ColaEspera cola={cola} />
+        <EstadoTecnicos tecnicos={tecnicos} />
+      </div>
+    </>
   )
 }
 

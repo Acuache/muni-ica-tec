@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  IconMenu2,
-  IconHome,
-  IconUser,
   IconCirclePlus,
   IconUsersGroup,
   IconCircleCheck,
@@ -27,7 +24,6 @@ type Solicitud = {
   created_at: string
 }
 type Props = {
-  username: string
   areas: Area[]
   solicitudActiva: Solicitud | null
   posicionCola: number
@@ -42,14 +38,12 @@ function formatTiempo(ms: number): string {
 }
 
 export default function TrabajadorPanel({
-  username,
   areas,
   solicitudActiva,
   posicionCola,
   tecnicoNombre,
 }: Props) {
   const router = useRouter()
-  const inicial = username.charAt(0).toUpperCase()
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
   const [tiempoLabel, setTiempoLabel] = useState('ahora')
 
@@ -84,78 +78,38 @@ export default function TrabajadorPanel({
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-gray-50">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+    <>
+      <h1 className="mb-1 text-xl font-bold text-gray-900">
+        Bienvenido, solicita ayuda ahora
+      </h1>
+      <p className="mb-1 text-sm text-gray-500">
+        Reporta cualquier incidencia técnica de manera inmediata.
+      </p>
+
+      {/* Etiqueta de actualización + botón manual */}
+      <div className="mb-5 flex items-center gap-2">
+        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
         <button
           type="button"
-          aria-label="Menú"
-          className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          onClick={handleRefresh}
+          aria-label="Refrescar"
+          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
         >
-          <IconMenu2 size={22} />
+          <IconRefresh size={14} />
         </button>
-        <span className="text-base font-semibold text-blue-700">
-          Soporte Municipal
-        </span>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-          {inicial}
-        </div>
-      </header>
+      </div>
 
-      {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto px-4 py-6">
-        <h1 className="mb-1 text-xl font-bold text-gray-900">
-          Bienvenido, solicita ayuda ahora
-        </h1>
-        <p className="mb-1 text-sm text-gray-500">
-          Reporta cualquier incidencia técnica de manera inmediata.
-        </p>
-
-        {/* Etiqueta de actualización + botón manual */}
-        <div className="mb-5 flex items-center gap-2">
-          <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            aria-label="Refrescar"
-            className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-          >
-            <IconRefresh size={14} />
-          </button>
-        </div>
-
-        {solicitudActiva ? (
-          <PantallaSeguimiento
-            solicitud={solicitudActiva}
-            posicionCola={posicionCola}
-            tecnicoNombre={tecnicoNombre}
-            onRefresh={() => router.refresh()}
-          />
-        ) : (
-          <FormularioNuevaSolicitud areas={areas} />
-        )}
-      </main>
-
-      {/* Barra de navegación inferior */}
-      <nav className="flex border-t border-gray-200 bg-white">
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-blue-600"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-            <IconHome size={18} className="text-white" />
-          </div>
-          <span className="text-xs font-medium">Inicio</span>
-        </button>
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-gray-400"
-        >
-          <IconUser size={22} />
-          <span className="text-xs">Perfil</span>
-        </button>
-      </nav>
-    </div>
+      {solicitudActiva ? (
+        <PantallaSeguimiento
+          solicitud={solicitudActiva}
+          posicionCola={posicionCola}
+          tecnicoNombre={tecnicoNombre}
+          onRefresh={() => router.refresh()}
+        />
+      ) : (
+        <FormularioNuevaSolicitud areas={areas} />
+      )}
+    </>
   )
 }
 

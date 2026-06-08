@@ -3,9 +3,6 @@
 import { useCallback, useEffect, useState, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  IconMenu2,
-  IconHome,
-  IconUser,
   IconRefresh,
   IconCheck,
   IconBuilding,
@@ -20,7 +17,6 @@ import type { ActionState } from './actions'
 import type { TecnicoEstado, SolicitudActiva, SolicitudCola } from './page'
 
 type Props = {
-  username: string
   estadoTecnico: TecnicoEstado
   esperando: number
   finalizadasHoy: number
@@ -58,7 +54,6 @@ function ordinalCola(n: number): string {
 }
 
 export default function TecnicoPanel({
-  username,
   estadoTecnico,
   esperando,
   finalizadasHoy,
@@ -66,7 +61,6 @@ export default function TecnicoPanel({
   cola,
 }: Props) {
   const router = useRouter()
-  const inicial = username.charAt(0).toUpperCase()
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
   const [tiempoLabel, setTiempoLabel] = useState('ahora')
   const [toast, setToast] = useState<string | null>(null)
@@ -108,109 +102,69 @@ export default function TecnicoPanel({
   }, [router])
 
   return (
-    <div className="flex min-h-full flex-col bg-gray-50">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+    <>
+      {/* Toast de colisión */}
+      {toast && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+          <IconAlertCircle size={16} className="shrink-0 text-orange-500" />
+          {toast}
+        </div>
+      )}
+
+      {/* Etiqueta de actualización + botón manual */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
         <button
           type="button"
-          aria-label="Menú"
-          className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          onClick={handleRefresh}
+          aria-label="Refrescar"
+          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
         >
-          <IconMenu2 size={22} />
+          <IconRefresh size={14} />
         </button>
-        <span className="text-base font-semibold text-blue-700">
-          Soporte Municipal
-        </span>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-          {inicial}
-        </div>
-      </header>
+      </div>
 
-      {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto px-4 py-5">
-        {/* Toast de colisión */}
-        {toast && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-            <IconAlertCircle size={16} className="shrink-0 text-orange-500" />
-            {toast}
+      <div className="space-y-4">
+        {/* Métricas: ESPERANDO y FINALIZADAS HOY */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Esperando
+              </p>
+              <p className="mt-1 text-3xl font-bold text-orange-600">{esperando}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
+              <IconClock size={20} className="text-orange-500" />
+            </div>
           </div>
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Finalizadas hoy
+              </p>
+              <p className="mt-1 text-3xl font-bold text-green-600">{finalizadasHoy}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+              <IconCircleCheck size={20} className="text-green-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* TU ESTADO ACTUAL */}
+        <CardEstadoActual estadoActual={estadoTecnico} />
+
+        {/* Solicitud activa — solo cuando atendiendo */}
+        {estadoTecnico === 'atendiendo' && solicitudActiva && (
+          <CardSolicitudActiva solicitud={solicitudActiva} />
         )}
 
-        {/* Etiqueta de actualización + botón manual */}
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            aria-label="Refrescar"
-            className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-          >
-            <IconRefresh size={14} />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {/* Métricas: ESPERANDO y FINALIZADAS HOY */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Esperando
-                </p>
-                <p className="mt-1 text-3xl font-bold text-orange-600">{esperando}</p>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
-                <IconClock size={20} className="text-orange-500" />
-              </div>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Finalizadas hoy
-                </p>
-                <p className="mt-1 text-3xl font-bold text-green-600">{finalizadasHoy}</p>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                <IconCircleCheck size={20} className="text-green-500" />
-              </div>
-            </div>
-          </div>
-
-          {/* TU ESTADO ACTUAL */}
-          <CardEstadoActual estadoActual={estadoTecnico} />
-
-          {/* Solicitud activa — solo cuando atendiendo */}
-          {estadoTecnico === 'atendiendo' && solicitudActiva && (
-            <CardSolicitudActiva solicitud={solicitudActiva} />
-          )}
-
-          {/* Cola de Espera — oculta en descanso y atendiendo */}
-          {estadoTecnico !== 'descanso' && estadoTecnico !== 'atendiendo' && (
-            <ColaEspera cola={cola} onColision={handleColision} />
-          )}
-        </div>
-      </main>
-
-      {/* Barra de navegación inferior */}
-      <nav className="flex border-t border-gray-200 bg-white">
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-blue-600"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-            <IconHome size={18} className="text-white" />
-          </div>
-          <span className="text-xs font-medium">Inicio</span>
-        </button>
-        <button
-          type="button"
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-gray-400"
-        >
-          <IconUser size={22} />
-          <span className="text-xs">Perfil</span>
-        </button>
-      </nav>
-    </div>
+        {/* Cola de Espera — oculta en descanso y atendiendo */}
+        {estadoTecnico !== 'descanso' && estadoTecnico !== 'atendiendo' && (
+          <ColaEspera cola={cola} onColision={handleColision} />
+        )}
+      </div>
+    </>
   )
 }
 

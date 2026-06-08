@@ -1,0 +1,81 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { IconSearch, IconBell, IconHome, IconUser } from '@tabler/icons-react'
+import CerrarSesionDialog from '@/components/cerrar-sesion-dialog'
+
+type Props = {
+  children: React.ReactNode
+}
+
+function NavTab({
+  href,
+  label,
+  Icon,
+  active,
+}: {
+  href: string
+  label: string
+  Icon: React.ComponentType<{ size?: number; className?: string }>
+  active: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex flex-1 flex-col items-center gap-1 py-2 ${active ? 'text-blue-600' : 'text-gray-400'}`}
+    >
+      {active ? (
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
+          <Icon size={18} className="text-white" />
+        </div>
+      ) : (
+        <Icon size={22} />
+      )}
+      <span className={`text-xs ${active ? 'font-medium' : ''}`}>{label}</span>
+    </Link>
+  )
+}
+
+export default function JefeShell({ children }: Props) {
+  const pathname = usePathname()
+  const enPerfil = pathname === '/jefe/perfil'
+
+  return (
+    <div className="flex min-h-full flex-col bg-gray-50">
+      {/* Header */}
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+        <CerrarSesionDialog />
+        <span className="text-base font-semibold text-gray-900">
+          Panel de Control
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Buscar"
+            className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          >
+            <IconSearch size={20} />
+          </button>
+          <button
+            type="button"
+            aria-label="Notificaciones"
+            className="relative rounded-md p-1 text-gray-500 hover:bg-gray-100"
+          >
+            <IconBell size={20} />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          </button>
+        </div>
+      </header>
+
+      {/* Contenido principal */}
+      <main className="flex-1 overflow-y-auto px-4 py-5">{children}</main>
+
+      {/* Barra de navegación inferior */}
+      <nav className="flex border-t border-gray-200 bg-white">
+        <NavTab href="/jefe" label="Inicio" Icon={IconHome} active={!enPerfil} />
+        <NavTab href="/jefe/perfil" label="Perfil" Icon={IconUser} active={enPerfil} />
+      </nav>
+    </div>
+  )
+}

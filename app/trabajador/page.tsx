@@ -10,7 +10,7 @@ export default async function TrabajadorPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('primer_ingreso, username')
+    .select('primer_ingreso')
     .eq('id', user.id)
     .single()
 
@@ -52,7 +52,6 @@ export default async function TrabajadorPage() {
 
   return (
     <TrabajadorPanel
-      username={profile?.username ?? ''}
       areas={areas ?? []}
       solicitudActiva={solicitudActiva ?? null}
       posicionCola={posicionCola}

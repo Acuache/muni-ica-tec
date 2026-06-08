@@ -10,30 +10,30 @@ el Dashboard de Supabase (Auth → Users → Add user) o con el Admin SDK.
 
 ### Jefe de informática
 
-| Campo    | Valor                    |
-|----------|--------------------------|
-| Email    | `jefe@muni-ica.gob.pe`   |
+| Campo      | Valor                  |
+| ---------- | ---------------------- |
+| Email      | `jefe@muni-ica.gob.pe` |
 | Contraseña | `Jefe2026!`            |
-| Username | `jefe_informatica`       |
-| Rol      | `jefe`                   |
+| Username   | `jefe_informatica`     |
+| Rol        | `jefe`                 |
 
 ### Técnico 1
 
-| Campo    | Valor                       |
-|----------|-----------------------------|
-| Email    | `tecnico1@muni-ica.gob.pe`  |
-| Contraseña | `Tecnico2026!`            |
-| Username | `tecnico_01`                |
-| Rol      | `tecnico`                   |
+| Campo      | Valor                      |
+| ---------- | -------------------------- |
+| Email      | `tecnico1@muni-ica.gob.pe` |
+| Contraseña | `Tecnico2026!`             |
+| Username   | `tecnico_01`               |
+| Rol        | `tecnico`                  |
 
 ### Técnico 2
 
-| Campo    | Valor                       |
-|----------|-----------------------------|
-| Email    | `tecnico2@muni-ica.gob.pe`  |
-| Contraseña | `Tecnico2026!`            |
-| Username | `tecnico_02`                |
-| Rol      | `tecnico`                   |
+| Campo      | Valor                      |
+| ---------- | -------------------------- |
+| Email      | `tecnico2@muni-ica.gob.pe` |
+| Contraseña | `Tecnico2026!`             |
+| Username   | `tecnico_02`               |
+| Rol        | `tecnico`                  |
 
 ---
 
@@ -41,12 +41,12 @@ el Dashboard de Supabase (Auth → Users → Add user) o con el Admin SDK.
 
 ### Trabajador
 
-| Campo    | Valor                          |
-|----------|--------------------------------|
-| Email    | `trabajador1@muni-ica.gob.pe`  |
-| Contraseña | `Trabajador2026!`            |
-| Username | `trabajador_01`                |
-| Rol      | `trabajador`                   |
+| Campo      | Valor                           |
+| ---------- | ------------------------------- |
+| Email      | `trabajador100@muni-ica.gob.pe` |
+| Contraseña | `Trabajador2026!`               |
+| Username   | `trabajador_01`                 |
+| Rol        | `trabajador`                    |
 
 **Cómo crearlo** desde el Dashboard de Supabase:
 
@@ -86,9 +86,9 @@ http://localhost:3000/**
 
 ## Resumen rápido
 
-| Usuario                        | Contraseña        | Panel destino  | Primer ingreso al crear |
-|--------------------------------|-------------------|----------------|-------------------------|
-| `jefe@muni-ica.gob.pe`         | `Jefe2026!`       | `/jefe`        | `true`                  |
-| `tecnico1@muni-ica.gob.pe`     | `Tecnico2026!`    | `/tecnico`     | `true`                  |
-| `tecnico2@muni-ica.gob.pe`     | `Tecnico2026!`    | `/tecnico`     | `true`                  |
-| `trabajador1@muni-ica.gob.pe`  | `Trabajador2026!` | `/trabajador`  | `true`                  |
+| Usuario                       | Contraseña        | Panel destino | Primer ingreso al crear |
+| ----------------------------- | ----------------- | ------------- | ----------------------- |
+| `jefe@muni-ica.gob.pe`        | `Jefe2026!`       | `/jefe`       | `true`                  |
+| `tecnico1@muni-ica.gob.pe`    | `Tecnico2026!`    | `/tecnico`    | `true`                  |
+| `tecnico2@muni-ica.gob.pe`    | `Tecnico2026!`    | `/tecnico`    | `true`                  |
+| `trabajador1@muni-ica.gob.pe` | `Trabajador2026!` | `/trabajador` | `true`                  |
