@@ -15,16 +15,23 @@ export async function completarPrimerIngreso(
   _prevState: PrimerIngresoState,
   formData: FormData,
 ): Promise<PrimerIngresoState> {
+  const lugar = (formData.get('lugar') as string | null)?.trim() ?? ''
+  const area = (formData.get('area') as string | null)?.trim() ?? ''
+  const puesto = (formData.get('puesto') as string | null)?.trim() ?? ''
+  const nombre = (formData.get('nombre') as string | null)?.trim() ?? ''
+  const apellido = (formData.get('apellido') as string | null)?.trim() ?? ''
   const telefono = (formData.get('telefono') as string | null)?.trim() ?? ''
   const email = (formData.get('email') as string | null)?.trim().toLowerCase() ?? ''
+  const mantenerPassword = formData.get('mantenerPassword') === 'true'
+  const nuevaPassword = (formData.get('nuevaPassword') as string | null)?.trim() ?? ''
 
-  if (!telefono) {
-    return { error: 'El teléfono no puede estar vacío.' }
-  }
-
-  if (!email) {
-    return { error: 'El correo no puede estar vacío.' }
-  }
+  if (!lugar) return { error: 'El campo Lugar no puede estar vacío.' }
+  if (!area) return { error: 'El campo Área no puede estar vacío.' }
+  if (!puesto) return { error: 'El campo Puesto no puede estar vacío.' }
+  if (!nombre) return { error: 'El campo Nombre no puede estar vacío.' }
+  if (!apellido) return { error: 'El campo Apellido no puede estar vacío.' }
+  if (!telefono) return { error: 'El campo Teléfono no puede estar vacío.' }
+  if (!email) return { error: 'El campo de correo no puede estar vacío.' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -34,15 +41,33 @@ export async function completarPrimerIngreso(
   }
 
   if (email !== user.email?.trim().toLowerCase()) {
-    return { error: 'El correo no coincide con el registrado en tu cuenta.' }
+    return { error: 'El correo no coincide con el registrado en tu cuenta. Comunícate con el área de informática.' }
   }
+
+  if (!mantenerPassword) {
+    if (!nuevaPassword) {
+      return { error: 'Escribe una nueva contraseña o activa el toggle para mantener la actual.' }
+    }
+    const { error: pwError } = await supabase.auth.updateUser({ password: nuevaPassword })
+    if (pwError) {
+      return { error: 'No se pudo actualizar la contraseña. Inténtalo de nuevo.' }
+    }
+  }
+
+  const username = `${nombre} ${apellido}`
 
   const { error } = await supabase
     .from('profiles')
-    .update({ telefono, email, primer_ingreso: false })
+    .update({ lugar, area, puesto, username, telefono, email, primer_ingreso: false })
     .eq('id', user.id)
 
   if (error) {
+    if (error.code === '23505') {
+      return {
+        error:
+          'Ya existe un usuario con ese nombre completo. Contacta al área de informática para resolver el conflicto.',
+      }
+    }
     return { error: 'No se pudo guardar la información. Inténtalo de nuevo.' }
   }
 

@@ -1,58 +1,200 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
+import { IconEye, IconEyeOff } from '@tabler/icons-react'
 import { completarPrimerIngreso } from './actions'
+
+const inputCls =
+  'mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500'
+
+const labelCls = 'block text-sm font-medium text-zinc-700'
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        {title}
+      </h2>
+      <div className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        {children}
+      </div>
+    </section>
+  )
+}
 
 export default function PrimerIngresoPage() {
   const [state, action, pending] = useActionState(completarPrimerIngreso, undefined)
+  const [mantenerPassword, setMantenerPassword] = useState(true)
+  const [mostrarPassword, setMostrarPassword] = useState(false)
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-zinc-50 px-4 py-12">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-lg">
         <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900">
           Bienvenido
         </h1>
         <p className="mb-8 text-center text-sm text-zinc-500">
-          Antes de continuar, registra tu teléfono y confirma tu correo para
-          poder recuperar tu contraseña en el futuro.
+          Completa tu información antes de continuar.
         </p>
 
-        <form action={action} className="space-y-4">
-          <div>
-            <label
-              htmlFor="telefono"
-              className="block text-sm font-medium text-zinc-700"
-            >
-              Teléfono
-            </label>
-            <input
-              id="telefono"
-              name="telefono"
-              type="tel"
-              autoComplete="tel"
-              required
-              className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-              placeholder="987 654 321"
-            />
-          </div>
+        <form action={action} className="space-y-6">
+          {/* Sección 1 — Datos del lugar */}
+          <Section title="Datos del lugar">
+            <div>
+              <label htmlFor="lugar" className={labelCls}>
+                Lugar
+              </label>
+              <input
+                id="lugar"
+                name="lugar"
+                type="text"
+                className={inputCls}
+                placeholder="Ej. Sede Central"
+              />
+            </div>
+            <div>
+              <label htmlFor="area" className={labelCls}>
+                Área
+              </label>
+              <input
+                id="area"
+                name="area"
+                type="text"
+                className={inputCls}
+                placeholder="Ej. Recursos Humanos"
+              />
+            </div>
+            <div>
+              <label htmlFor="puesto" className={labelCls}>
+                Puesto
+              </label>
+              <input
+                id="puesto"
+                name="puesto"
+                type="text"
+                className={inputCls}
+                placeholder="Ej. Asistente administrativo"
+              />
+            </div>
+          </Section>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-zinc-700"
-            >
-              Escribe tu correo para confirmarlo
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-              placeholder="correo@muni-ica.gob.pe"
-            />
-          </div>
+          {/* Sección 2 — Datos del usuario */}
+          <Section title="Datos del usuario">
+            <div>
+              <label htmlFor="nombre" className={labelCls}>
+                Nombre
+              </label>
+              <input
+                id="nombre"
+                name="nombre"
+                type="text"
+                autoComplete="given-name"
+                className={inputCls}
+                placeholder="Ej. Juan"
+              />
+            </div>
+            <div>
+              <label htmlFor="apellido" className={labelCls}>
+                Apellido
+              </label>
+              <input
+                id="apellido"
+                name="apellido"
+                type="text"
+                autoComplete="family-name"
+                className={inputCls}
+                placeholder="Ej. García"
+              />
+            </div>
+          </Section>
+
+          {/* Sección 3 — Datos de la cuenta */}
+          <Section title="Datos de la cuenta">
+            <div>
+              <label htmlFor="telefono" className={labelCls}>
+                Teléfono
+              </label>
+              <input
+                id="telefono"
+                name="telefono"
+                type="tel"
+                autoComplete="tel"
+                className={inputCls}
+                placeholder="987 654 321"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className={labelCls}>
+                Escribe el correo que te fue entregado por el área de informática.
+                Si no coincide, comunícate con el área de informática para su revisión.
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                className={inputCls}
+                placeholder="correo@muni-ica.gob.pe"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <span className={labelCls}>Contraseña</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={mantenerPassword}
+                  onClick={() => {
+                    setMantenerPassword((v) => !v)
+                    setMostrarPassword(false)
+                  }}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 ${
+                    mantenerPassword ? 'bg-zinc-900' : 'bg-zinc-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      mantenerPassword ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">
+                {mantenerPassword
+                  ? 'Mantener mi contraseña actual'
+                  : 'Quiero establecer una nueva contraseña'}
+              </p>
+
+              <input
+                type="hidden"
+                name="mantenerPassword"
+                value={mantenerPassword ? 'true' : 'false'}
+              />
+
+              {!mantenerPassword && (
+                <div className="relative mt-3">
+                  <input
+                    id="nuevaPassword"
+                    name="nuevaPassword"
+                    type={mostrarPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    className={`${inputCls} pr-10`}
+                    placeholder="Nueva contraseña"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPassword((v) => !v)}
+                    aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="absolute inset-y-0 right-0 mt-1 flex items-center px-3 text-zinc-400 hover:text-zinc-600"
+                  >
+                    {mostrarPassword ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                  </button>
+                </div>
+              )}
+            </div>
+          </Section>
 
           {state?.error && (
             <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
