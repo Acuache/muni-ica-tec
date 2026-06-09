@@ -236,14 +236,39 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-600">
         Atendiendo ahora
       </p>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {solicitud.area}
-      </p>
-      <p className="mt-0.5 font-semibold text-gray-900">{solicitud.titulo}</p>
-      <p className="mt-1 text-xs text-gray-500">
-        Trabajador:{' '}
-        <span className="font-medium text-gray-700">{solicitud.trabajador}</span>
-      </p>
+      <p className="font-semibold text-gray-900">{solicitud.titulo}</p>
+
+      <div className="mt-2 space-y-0.5 text-xs text-gray-600">
+        <p>
+          <span className="text-gray-400">Trabajador: </span>
+          <span className="font-medium text-gray-800">{solicitud.trabajador}</span>
+        </p>
+        {solicitud.telefono && (
+          <p>
+            <span className="text-gray-400">Celular: </span>
+            <span className="font-medium text-gray-800">{solicitud.telefono}</span>
+          </p>
+        )}
+        <p>
+          <span className="text-gray-400">Lugar: </span>
+          <span className="font-medium text-gray-800">{solicitud.lugar || '—'}</span>
+        </p>
+        <p>
+          <span className="text-gray-400">Área: </span>
+          <span className="font-medium text-gray-800">{solicitud.area || '—'}</span>
+        </p>
+        <p>
+          <span className="text-gray-400">Puesto: </span>
+          <span className="font-medium text-gray-800">{solicitud.puesto || '—'}</span>
+        </p>
+      </div>
+
+      {solicitud.anydesk_code && (
+        <p className="mt-2 inline-block rounded bg-white px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
+          Código AnyDesk: {solicitud.anydesk_code}
+        </p>
+      )}
+
       <form action={action} className="mt-3">
         <input type="hidden" name="solicitud_id" value={solicitud.id} />
         <button
@@ -319,14 +344,29 @@ function ItemCola({
   return (
     <div className="rounded-lg border border-gray-200 p-3">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          {solicitud.area}
-        </span>
-        <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+        <p className="text-sm font-semibold text-gray-900">{solicitud.titulo}</p>
+        <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
           {ordinalCola(posicion)}
         </span>
       </div>
-      <p className="mb-3 text-sm font-semibold text-gray-900">{solicitud.titulo}</p>
+      <div className="mb-2 space-y-0.5 text-xs text-gray-600">
+        <div className="flex flex-wrap gap-x-3">
+          <span><span className="text-gray-400">Trabajador: </span>{solicitud.trabajador || '—'}</span>
+          {solicitud.telefono && (
+            <span><span className="text-gray-400">Celular: </span>{solicitud.telefono}</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-3">
+          <span><span className="text-gray-400">Lugar: </span>{solicitud.lugar || '—'}</span>
+          <span><span className="text-gray-400">Área: </span>{solicitud.area || '—'}</span>
+          <span><span className="text-gray-400">Puesto: </span>{solicitud.puesto || '—'}</span>
+        </div>
+      </div>
+      {solicitud.anydesk_code && (
+        <p className="mb-2 inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+          Código AnyDesk: {solicitud.anydesk_code}
+        </p>
+      )}
       <form action={action}>
         <input type="hidden" name="solicitud_id" value={solicitud.id} />
         <button

@@ -10,25 +10,19 @@ export default async function TrabajadorPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('primer_ingreso')
+    .select('primer_ingreso, lugar, area, puesto')
     .eq('id', user.id)
     .single()
 
   if (profile?.primer_ingreso) redirect('/primer-ingreso')
 
-  const [{ data: areas }, { data: solicitudActiva }] = await Promise.all([
-    supabase
-      .from('areas')
-      .select('id, nombre')
-      .order('nombre'),
-    supabase
-      .from('solicitudes')
-      .select('id, area_id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
-      .eq('trabajador_id', user.id)
-      .in('estado', ['en_espera', 'en_proceso'])
-      .limit(1)
-      .maybeSingle(),
-  ])
+  const { data: solicitudActiva } = await supabase
+    .from('solicitudes')
+    .select('id, area_id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
+    .eq('trabajador_id', user.id)
+    .in('estado', ['en_espera', 'en_proceso'])
+    .limit(1)
+    .maybeSingle()
 
   let posicionCola = 0
   let tecnicoNombre: string | null = null
@@ -52,10 +46,12 @@ export default async function TrabajadorPage() {
 
   return (
     <TrabajadorPanel
-      areas={areas ?? []}
       solicitudActiva={solicitudActiva ?? null}
       posicionCola={posicionCola}
       tecnicoNombre={tecnicoNombre}
+      lugar={profile?.lugar ?? null}
+      area={profile?.area ?? null}
+      puesto={profile?.puesto ?? null}
     />
   )
 }

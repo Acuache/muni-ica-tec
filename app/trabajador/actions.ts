@@ -9,14 +9,16 @@ export async function crearSolicitud(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const area_id = (formData.get('area_id') as string | null)?.trim() ?? ''
   const tipo_ayuda = (formData.get('tipo_ayuda') as string | null) ?? ''
   const titulo = (formData.get('titulo') as string | null)?.trim() ?? ''
   const descripcion = (formData.get('descripcion') as string | null)?.trim() ?? ''
+  const anydesk_code = (formData.get('anydesk_code') as string | null)?.trim() ?? ''
 
-  if (!area_id) return { error: 'Selecciona un área.' }
   if (!tipo_ayuda) return { error: 'Selecciona el tipo de ayuda.' }
   if (!titulo) return { error: 'El título no puede estar vacío.' }
+  if (tipo_ayuda === 'virtual' && !/^\d+$/.test(anydesk_code)) {
+    return { error: 'El código AnyDesk debe contener solo números.' }
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,10 +26,10 @@ export async function crearSolicitud(
 
   const { error } = await supabase.from('solicitudes').insert({
     trabajador_id: user.id,
-    area_id,
     tipo_ayuda,
     titulo,
     descripcion: descripcion || null,
+    anydesk_code: tipo_ayuda === 'virtual' ? anydesk_code : null,
   })
 
   if (error) return { error: 'No se pudo crear la solicitud. Inténtalo de nuevo.' }

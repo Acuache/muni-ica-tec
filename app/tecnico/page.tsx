@@ -12,14 +12,23 @@ export type TecnicoEstado =
 export type SolicitudActiva = {
   id: string
   titulo: string
-  area: string
+  anydesk_code: string | null
   trabajador: string
+  telefono: string | null
+  lugar: string
+  area: string
+  puesto: string
 }
 
 export type SolicitudCola = {
   id: string
   titulo: string
+  anydesk_code: string | null
+  trabajador: string
+  telefono: string | null
+  lugar: string
   area: string
+  puesto: string
 }
 
 export default async function TecnicoPage() {
@@ -68,40 +77,55 @@ export default async function TecnicoPage() {
   let solicitudActiva: SolicitudActiva | null = null
   let cola: SolicitudCola[] = []
 
+  type PerfilTrabajador = {
+    username: string
+    telefono: string | null
+    lugar: string | null
+    area: string | null
+    puesto: string | null
+  }
+
   if (estadoTecnico === 'atendiendo') {
     const { data: sol } = await supabase
       .from('solicitudes')
-      .select('id, titulo, trabajador_id, areas!area_id(nombre)')
+      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
       .eq('tecnico_id', user.id)
       .eq('estado', 'en_proceso')
       .maybeSingle()
 
     if (sol) {
-      const { data: trabajador } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', sol.trabajador_id)
-        .single()
-
+      const perfil = sol.profiles as unknown as PerfilTrabajador | null
       solicitudActiva = {
         id: sol.id,
         titulo: sol.titulo,
-        area: (sol.areas as unknown as { nombre: string } | null)?.nombre ?? '',
-        trabajador: trabajador?.username ?? '',
+        anydesk_code: sol.anydesk_code ?? null,
+        trabajador: perfil?.username ?? '',
+        telefono: perfil?.telefono ?? null,
+        lugar: perfil?.lugar ?? '',
+        area: perfil?.area ?? '',
+        puesto: perfil?.puesto ?? '',
       }
     }
   } else if (estadoTecnico !== 'descanso') {
     const { data: colaData } = await supabase
       .from('solicitudes')
-      .select('id, titulo, areas!area_id(nombre)')
+      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
       .eq('estado', 'en_espera')
       .order('created_at', { ascending: true })
 
-    cola = (colaData ?? []).map((s) => ({
-      id: s.id,
-      titulo: s.titulo,
-      area: (s.areas as unknown as { nombre: string } | null)?.nombre ?? '',
-    }))
+    cola = (colaData ?? []).map((s) => {
+      const perfil = s.profiles as unknown as PerfilTrabajador | null
+      return {
+        id: s.id,
+        titulo: s.titulo,
+        anydesk_code: s.anydesk_code ?? null,
+        trabajador: perfil?.username ?? '',
+        telefono: perfil?.telefono ?? null,
+        lugar: perfil?.lugar ?? '',
+        area: perfil?.area ?? '',
+        puesto: perfil?.puesto ?? '',
+      }
+    })
   }
 
   return (

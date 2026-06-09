@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useActionState } from 'react'
+import React, { useEffect, useRef, useState, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   IconCirclePlus,
@@ -12,7 +12,6 @@ import {
 import { crearSolicitud, cancelarSolicitud, confirmarResolucion } from './actions'
 import type { ActionState } from './actions'
 
-type Area = { id: string; nombre: string }
 type Solicitud = {
   id: string
   area_id: string
@@ -24,10 +23,12 @@ type Solicitud = {
   created_at: string
 }
 type Props = {
-  areas: Area[]
   solicitudActiva: Solicitud | null
   posicionCola: number
   tecnicoNombre: string | null
+  lugar: string | null
+  area: string | null
+  puesto: string | null
 }
 
 function formatTiempo(ms: number): string {
@@ -38,10 +39,12 @@ function formatTiempo(ms: number): string {
 }
 
 export default function TrabajadorPanel({
-  areas,
   solicitudActiva,
   posicionCola,
   tecnicoNombre,
+  lugar,
+  area,
+  puesto,
 }: Props) {
   const router = useRouter()
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
@@ -107,19 +110,30 @@ export default function TrabajadorPanel({
           onRefresh={() => router.refresh()}
         />
       ) : (
-        <FormularioNuevaSolicitud areas={areas} />
+        <FormularioNuevaSolicitud lugar={lugar} area={area} puesto={puesto} />
       )}
     </>
   )
 }
 
-function FormularioNuevaSolicitud({ areas }: { areas: Area[] }) {
+function FormularioNuevaSolicitud({
+  lugar,
+  area,
+  puesto,
+}: {
+  lugar: string | null
+  area: string | null
+  puesto: string | null
+}) {
   const router = useRouter()
   const [state, action, pending] = useActionState<ActionState, FormData>(
     crearSolicitud,
     undefined,
   )
   const wasPendingRef = useRef(false)
+  const [tipoAyuda, setTipoAyuda] = useState('')
+  const [anydesk, setAnydesk] = useState('')
+  const [anyDeskError, setAnyDeskError] = useState('')
 
   useEffect(() => {
     if (wasPendingRef.current && !pending && state === undefined) {
@@ -127,6 +141,22 @@ function FormularioNuevaSolicitud({ areas }: { areas: Area[] }) {
     }
     wasPendingRef.current = pending
   }, [pending, state, router])
+
+  function handleTipoAyudaChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value
+    setTipoAyuda(val)
+    if (val !== 'virtual') {
+      setAnydesk('')
+      setAnyDeskError('')
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    if (tipoAyuda === 'virtual' && !/^\d+$/.test(anydesk)) {
+      e.preventDefault()
+      setAnyDeskError('El código AnyDesk debe contener solo números.')
+    }
+  }
 
   const inputClass =
     'mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
@@ -138,31 +168,71 @@ function FormularioNuevaSolicitud({ areas }: { areas: Area[] }) {
         Nueva Solicitud
       </h2>
 
-      <form action={action} className="space-y-4">
-        <div>
-          <label htmlFor="area_id" className="block text-sm font-medium text-gray-700">
-            Área
-          </label>
-          <select id="area_id" name="area_id" required className={inputClass}>
-            <option value="">Ej: Tesorería</option>
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nombre}
-              </option>
-            ))}
-          </select>
+      {/* Datos de perfil — solo lectura */}
+      <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50 p-3">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+          Tus datos
+        </p>
+        <div className="grid grid-cols-3 gap-2 text-sm">
+          <div>
+            <p className="text-xs text-gray-500">Lugar</p>
+            <p className="font-medium text-gray-800">{lugar || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Área</p>
+            <p className="font-medium text-gray-800">{area || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Puesto</p>
+            <p className="font-medium text-gray-800">{puesto || '—'}</p>
+          </div>
         </div>
+      </div>
 
+      <form action={action} onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="tipo_ayuda" className="block text-sm font-medium text-gray-700">
             Tipo de ayuda
           </label>
-          <select id="tipo_ayuda" name="tipo_ayuda" required className={inputClass}>
+          <select
+            id="tipo_ayuda"
+            name="tipo_ayuda"
+            required
+            value={tipoAyuda}
+            onChange={handleTipoAyudaChange}
+            className={inputClass}
+          >
             <option value="">Selecciona…</option>
             <option value="presencial">Presencial</option>
             <option value="virtual">Virtual</option>
           </select>
         </div>
+
+        {tipoAyuda === 'virtual' && (
+          <div>
+            <label htmlFor="anydesk_code" className="block text-sm font-medium text-gray-700">
+              Código AnyDesk
+            </label>
+            <input
+              id="anydesk_code"
+              name="anydesk_code"
+              type="text"
+              inputMode="numeric"
+              required
+              maxLength={25}
+              value={anydesk}
+              onChange={(e) => {
+                setAnydesk(e.target.value)
+                if (anyDeskError) setAnyDeskError('')
+              }}
+              placeholder="Ej: 123456789"
+              className={inputClass}
+            />
+            {anyDeskError && (
+              <p className="mt-1 text-xs text-red-600">{anyDeskError}</p>
+            )}
+          </div>
+        )}
 
         <div>
           <label htmlFor="titulo" className="block text-sm font-medium text-gray-700">
@@ -180,7 +250,8 @@ function FormularioNuevaSolicitud({ areas }: { areas: Area[] }) {
 
         <div>
           <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
-            Descripción
+            Descripción{' '}
+            <span className="font-normal text-gray-400">(Opcional)</span>
           </label>
           <textarea
             id="descripcion"
