@@ -17,7 +17,7 @@ export default async function JefePerfilPage() {
   if (profile?.primer_ingreso) redirect('/primer-ingreso')
 
   return (
-    <>
+    <div className="mx-auto w-full max-w-3xl">
       <h1 className="mb-4 text-xl font-bold text-gray-900">Mi perfil</h1>
       <DatosPerfil
         username={profile?.username ?? ''}
@@ -26,6 +26,6 @@ export default async function JefePerfilPage() {
         email={profile?.email ?? null}
         rol={profile?.rol ?? 'jefe'}
       />
-    </>
+    </div>
   )
 }

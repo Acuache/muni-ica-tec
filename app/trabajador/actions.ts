@@ -77,14 +77,35 @@ export async function confirmarResolucion(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Sesión expirada.' }
 
-  const { error } = await supabase
-    .from('solicitudes')
-    .update({ estado: resultado })
-    .eq('id', solicitudId)
-    .eq('trabajador_id', user.id)
-    .eq('estado', 'en_proceso')
+  if (resultado === 'no_solucionado') {
+    const { error } = await supabase
+      .from('solicitudes')
+      .update({ estado: 'no_solucionado' })
+      .eq('id', solicitudId)
+      .eq('trabajador_id', user.id)
+      .eq('estado', 'en_proceso')
+    if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+  } else {
+    const { data: fila } = await supabase
+      .from('solicitudes')
+      .select('confirmacion_tecnico')
+      .eq('id', solicitudId)
+      .eq('trabajador_id', user.id)
+      .eq('estado', 'en_proceso')
+      .single()
 
-  if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+    const updates = fila?.confirmacion_tecnico
+      ? { confirmacion_trabajador: true, estado: 'solucionado' }
+      : { confirmacion_trabajador: true }
+
+    const { error } = await supabase
+      .from('solicitudes')
+      .update(updates)
+      .eq('id', solicitudId)
+      .eq('trabajador_id', user.id)
+      .eq('estado', 'en_proceso')
+    if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+  }
 
   redirect('/trabajador')
 }

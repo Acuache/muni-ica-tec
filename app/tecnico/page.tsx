@@ -18,6 +18,7 @@ export type SolicitudActiva = {
   lugar: string
   area: string
   puesto: string
+  confirmacionTecnico: boolean
 }
 
 export type SolicitudCola = {
@@ -88,7 +89,7 @@ export default async function TecnicoPage() {
   if (estadoTecnico === 'atendiendo') {
     const { data: sol } = await supabase
       .from('solicitudes')
-      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
+      .select('id, titulo, anydesk_code, confirmacion_tecnico, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
       .eq('tecnico_id', user.id)
       .eq('estado', 'en_proceso')
       .maybeSingle()
@@ -104,6 +105,7 @@ export default async function TecnicoPage() {
         lugar: perfil?.lugar ?? '',
         area: perfil?.area ?? '',
         puesto: perfil?.puesto ?? '',
+        confirmacionTecnico: sol.confirmacion_tecnico ?? false,
       }
     }
   } else if (estadoTecnico !== 'descanso') {

@@ -3,13 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconRefresh } from '@tabler/icons-react'
-import type { SolicitudColaJefe, TecnicoCard } from './page'
+import type { TecnicoCard } from './page'
 
 type Props = {
   esperando: number
   solucionadosHoy: number
   noSolucionadosHoy: number
-  cola: SolicitudColaJefe[]
   tecnicos: TecnicoCard[]
 }
 
@@ -24,7 +23,6 @@ export default function JefePanel({
   esperando,
   solucionadosHoy,
   noSolucionadosHoy,
-  cola,
   tecnicos,
 }: Props) {
   const router = useRouter()
@@ -69,13 +67,12 @@ export default function JefePanel({
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         <KpiCards
           esperando={esperando}
           solucionadosHoy={solucionadosHoy}
           noSolucionadosHoy={noSolucionadosHoy}
         />
-        <ColaEspera cola={cola} />
         <EstadoTecnicos tecnicos={tecnicos} />
       </div>
     </>
@@ -146,65 +143,6 @@ function KpiCards({
   )
 }
 
-function ColaEspera({ cola }: { cola: SolicitudColaJefe[] }) {
-  const badgeClass = {
-    en_espera: 'bg-blue-100 text-blue-700',
-    en_proceso: 'bg-blue-600 text-white',
-  } as const
-
-  const badgeLabel = {
-    en_espera: 'En Espera',
-    en_proceso: 'En Proceso',
-  } as const
-
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="font-semibold text-gray-800">Cola de Espera</p>
-      </div>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        {cola.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-gray-400">
-            No hay solicitudes activas.
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
-                  Área
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
-                  Problema
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {cola.map((s) => (
-                <tr key={s.id}>
-                  <td className="px-4 py-3 font-semibold text-gray-800">
-                    {s.area}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{s.titulo}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass[s.estado]}`}
-                    >
-                      {badgeLabel[s.estado]}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  )
-}
 
 const AVATAR_COLORS = [
   'bg-teal-500',

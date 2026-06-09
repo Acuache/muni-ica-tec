@@ -2,13 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import JefePanel from './panel'
 
-export type SolicitudColaJefe = {
-  id: string
-  titulo: string
-  area: string
-  estado: 'en_espera' | 'en_proceso'
-}
-
 export type TecnicoCard = {
   id: string
   username: string
@@ -41,7 +34,6 @@ export default async function JefePage() {
     { count: esperando },
     { count: solucionadosHoy },
     { count: noSolucionadosHoy },
-    { data: colaRaw },
     { data: tecnicosRaw },
   ] = await Promise.all([
     supabase
@@ -59,11 +51,6 @@ export default async function JefePage() {
       .eq('estado', 'no_solucionado')
       .gte('updated_at', hoyInicio.toISOString()),
     supabase
-      .from('solicitudes')
-      .select('id, titulo, estado, areas!area_id(nombre)')
-      .in('estado', ['en_espera', 'en_proceso'])
-      .order('created_at', { ascending: true }),
-    supabase
       .from('technician_status')
       .select(
         'tecnico_id, estado, ubicacion, atendiendo_solicitud_id, updated_at, profiles!tecnico_id(username)',
@@ -71,7 +58,6 @@ export default async function JefePage() {
       .order('tecnico_id', { ascending: true }),
   ])
 
-  // Resolve trabajador usernames for technicians currently 'atendiendo'
   const atendiendo = (tecnicosRaw ?? []).filter(
     (t) => t.estado === 'atendiendo' && t.atendiendo_solicitud_id,
   )
@@ -86,8 +72,7 @@ export default async function JefePage() {
 
     for (const sol of solicitudesActivas ?? []) {
       const username =
-        (sol.profiles as unknown as { username: string } | null)?.username ??
-        null
+        (sol.profiles as unknown as { username: string } | null)?.username ?? null
       if (username) trabajadoresPorSolicitud[sol.id] = username
     }
   }
@@ -106,19 +91,11 @@ export default async function JefePage() {
     }))
     .sort((a, b) => a.username.localeCompare(b.username))
 
-  const cola: SolicitudColaJefe[] = (colaRaw ?? []).map((s) => ({
-    id: s.id,
-    titulo: s.titulo,
-    area: (s.areas as unknown as { nombre: string } | null)?.nombre ?? '',
-    estado: s.estado as SolicitudColaJefe['estado'],
-  }))
-
   return (
     <JefePanel
       esperando={esperando ?? 0}
       solucionadosHoy={solucionadosHoy ?? 0}
       noSolucionadosHoy={noSolucionadosHoy ?? 0}
-      cola={cola}
       tecnicos={tecnicos}
     />
   )

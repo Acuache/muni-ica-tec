@@ -12,7 +12,7 @@ import {
   IconCircleCheck,
   IconAlertCircle,
 } from '@tabler/icons-react'
-import { cambiarEstado, atenderAhora, liberarSolicitud } from './actions'
+import { cambiarEstado, atenderAhora, liberarSolicitud, confirmarResolucionTecnico } from './actions'
 import type { ActionState } from './actions'
 import type { TecnicoEstado, SolicitudActiva, SolicitudCola } from './page'
 
@@ -226,10 +226,15 @@ function CardEstadoActual({ estadoActual }: { estadoActual: TecnicoEstado }) {
 }
 
 function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
+  const [liberarState, liberarAction, liberarPending] = useActionState<ActionState, FormData>(
     liberarSolicitud,
     undefined,
   )
+  const [resolverState, resolverAction, resolverPending] = useActionState<ActionState, FormData>(
+    confirmarResolucionTecnico,
+    undefined,
+  )
+  const pending = liberarPending || resolverPending
 
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -269,18 +274,39 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
         </p>
       )}
 
-      <form action={action} className="mt-3">
+      {solicitud.confirmacionTecnico ? (
+        <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs text-green-700">
+          Confirmaste que fue resuelto. Esperando confirmación del trabajador.
+        </p>
+      ) : (
+        <form action={resolverAction} className="mt-3">
+          <input type="hidden" name="solicitud_id" value={solicitud.id} />
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {resolverPending ? 'Guardando…' : 'Resuelto'}
+          </button>
+        </form>
+      )}
+
+      <form action={liberarAction} className="mt-2">
         <input type="hidden" name="solicitud_id" value={solicitud.id} />
         <button
           type="submit"
           disabled={pending}
           className="rounded-lg border border-dashed border-gray-400 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-red-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? 'Liberando…' : 'Liberar'}
+          {liberarPending ? 'Liberando…' : 'Liberar'}
         </button>
       </form>
-      {state?.error && (
-        <p className="mt-2 text-xs text-red-600">{state.error}</p>
+
+      {liberarState?.error && (
+        <p className="mt-2 text-xs text-red-600">{liberarState.error}</p>
+      )}
+      {resolverState?.error && (
+        <p className="mt-2 text-xs text-red-600">{resolverState.error}</p>
       )}
     </div>
   )

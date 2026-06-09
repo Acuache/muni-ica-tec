@@ -18,7 +18,7 @@ export default async function TrabajadorPage() {
 
   const { data: solicitudActiva } = await supabase
     .from('solicitudes')
-    .select('id, area_id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
+    .select('id, area_id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at, confirmacion_trabajador')
     .eq('trabajador_id', user.id)
     .in('estado', ['en_espera', 'en_proceso'])
     .limit(1)

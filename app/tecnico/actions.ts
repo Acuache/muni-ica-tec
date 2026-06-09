@@ -94,6 +94,43 @@ export async function atenderAhora(
   redirect('/tecnico')
 }
 
+export async function confirmarResolucionTecnico(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
+  if (!solicitudId) return { error: 'Solicitud no identificada.' }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sesión expirada.' }
+
+  const { data: fila } = await supabase
+    .from('solicitudes')
+    .select('confirmacion_trabajador')
+    .eq('id', solicitudId)
+    .eq('tecnico_id', user.id)
+    .eq('estado', 'en_proceso')
+    .single()
+
+  const updates = fila?.confirmacion_trabajador
+    ? { confirmacion_tecnico: true, estado: 'solucionado' }
+    : { confirmacion_tecnico: true }
+
+  const { error } = await supabase
+    .from('solicitudes')
+    .update(updates)
+    .eq('id', solicitudId)
+    .eq('tecnico_id', user.id)
+    .eq('estado', 'en_proceso')
+
+  if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+
+  redirect('/tecnico')
+}
+
 export async function liberarSolicitud(
   _prevState: ActionState,
   formData: FormData,
