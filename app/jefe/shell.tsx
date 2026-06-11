@@ -14,6 +14,7 @@ type Props = {
 const NAV_LINKS = [
   { href: '/jefe',            label: 'Panel' },
   { href: '/jefe/solicitudes', label: 'Solicitudes' },
+  { href: '/jefe/reportes',    label: 'Reportes' },
 ]
 
 export default function JefeShell({ username, children }: Props) {
