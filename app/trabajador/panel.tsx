@@ -21,7 +21,6 @@ type Solicitud = {
   estado: string
   tecnico_id: string | null
   created_at: string
-  confirmacion_trabajador: boolean
 }
 type Props = {
   solicitudActiva: Solicitud | null
@@ -108,7 +107,6 @@ export default function TrabajadorPanel({
           solicitud={solicitudActiva}
           posicionCola={posicionCola}
           tecnicoNombre={tecnicoNombre}
-          confirmacionTrabajador={solicitudActiva.confirmacion_trabajador}
           onRefresh={() => router.refresh()}
         />
       ) : (
@@ -286,13 +284,11 @@ function PantallaSeguimiento({
   solicitud,
   posicionCola,
   tecnicoNombre,
-  confirmacionTrabajador,
   onRefresh,
 }: {
   solicitud: Solicitud
   posicionCola: number
   tecnicoNombre: string | null
-  confirmacionTrabajador: boolean
   onRefresh: () => void
 }) {
   return (
@@ -305,7 +301,6 @@ function PantallaSeguimiento({
         <CardResolucion
           solicitudId={solicitud.id}
           tecnicoNombre={tecnicoNombre}
-          confirmacionTrabajador={confirmacionTrabajador}
           onRefresh={onRefresh}
         />
       )}
@@ -316,12 +311,10 @@ function PantallaSeguimiento({
 function CardResolucion({
   solicitudId,
   tecnicoNombre,
-  confirmacionTrabajador,
   onRefresh,
 }: {
   solicitudId: string
   tecnicoNombre: string | null
-  confirmacionTrabajador: boolean
   onRefresh: () => void
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -349,44 +342,38 @@ function CardResolucion({
         <span className="font-semibold text-gray-900">{tecnicoNombre}</span>
       </p>
 
-      {confirmacionTrabajador ? (
-        <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          Confirmaste que fue resuelto. Esperando confirmación del técnico.
-        </p>
-      ) : (
-        <form action={action} className="mt-4 space-y-4">
-          <input type="hidden" name="solicitud_id" value={solicitudId} />
+      <form action={action} className="mt-4 space-y-4">
+        <input type="hidden" name="solicitud_id" value={solicitudId} />
 
-          {state?.error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-              {state.error}
-            </p>
-          )}
+        {state?.error && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            {state.error}
+          </p>
+        )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="submit"
-              name="resultado"
-              value="solucionado"
-              disabled={pending}
-              className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-            >
-              <IconCircleCheck size={18} />
-              Resuelto
-            </button>
-            <button
-              type="submit"
-              name="resultado"
-              value="no_solucionado"
-              disabled={pending}
-              className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-            >
-              <IconCircleX size={18} />
-              No resuelto
-            </button>
-          </div>
-        </form>
-      )}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="submit"
+            name="resultado"
+            value="solucionado"
+            disabled={pending}
+            className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+          >
+            <IconCircleCheck size={18} />
+            Resuelto
+          </button>
+          <button
+            type="submit"
+            name="resultado"
+            value="no_solucionado"
+            disabled={pending}
+            className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            <IconCircleX size={18} />
+            No resuelto
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

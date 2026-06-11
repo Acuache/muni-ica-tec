@@ -274,22 +274,16 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
         </p>
       )}
 
-      {solicitud.confirmacionTecnico ? (
-        <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs text-green-700">
-          Confirmaste que fue resuelto. Esperando confirmación del trabajador.
-        </p>
-      ) : (
-        <form action={resolverAction} className="mt-3">
-          <input type="hidden" name="solicitud_id" value={solicitud.id} />
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {resolverPending ? 'Guardando…' : 'Resuelto'}
-          </button>
-        </form>
-      )}
+      <form action={resolverAction} className="mt-3">
+        <input type="hidden" name="solicitud_id" value={solicitud.id} />
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {resolverPending ? 'Guardando…' : 'Resuelto'}
+        </button>
+      </form>
 
       <form action={liberarAction} className="mt-2">
         <input type="hidden" name="solicitud_id" value={solicitud.id} />

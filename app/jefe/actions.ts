@@ -5,66 +5,59 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export type ActionState = { error: string } | undefined
 
-export async function toggleConfirmacionJefe(
-  _prevState: ActionState,
-  formData: FormData,
+export async function marcarSolucionado(
+  { solicitudId }: { solicitudId: string },
 ): Promise<ActionState> {
-  const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  const campo = (formData.get('campo') as string | null) ?? ''
-  const valor = formData.get('valor') === 'true'
-
   if (!solicitudId) return { error: 'Solicitud no identificada.' }
-  if (campo !== 'trabajador' && campo !== 'tecnico') return { error: 'Campo no válido.' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Sesión expirada.' }
 
-  const columna = campo === 'trabajador' ? 'confirmacion_trabajador' : 'confirmacion_tecnico'
-
   const admin = createAdminClient()
 
-  const { error: updateError } = await admin
-    .from('solicitudes')
-    .update({ [columna]: valor })
-    .eq('id', solicitudId)
-
-  if (updateError) return { error: 'No se pudo actualizar la confirmación.' }
-
-  // Releer ambas columnas y el estado actual para aplicar la regla de transición
   const { data: fila } = await admin
     .from('solicitudes')
-    .select('confirmacion_trabajador, confirmacion_tecnico, estado')
+    .select('estado, confirmacion_trabajador, confirmacion_tecnico')
     .eq('id', solicitudId)
     .single()
 
   if (!fila) return { error: 'No se encontró la solicitud.' }
-
-  if (fila.confirmacion_trabajador && fila.confirmacion_tecnico) {
-    await admin
-      .from('solicitudes')
-      .update({ estado: 'solucionado' })
-      .eq('id', solicitudId)
-  } else if (!valor && fila.estado === 'solucionado') {
-    // Se desmarcó una confirmación — el cierre deja de ser válido
-    await admin
-      .from('solicitudes')
-      .update({ estado: 'en_proceso' })
-      .eq('id', solicitudId)
+  if (fila.estado !== 'en_proceso') {
+    return { error: 'La solicitud no está en proceso.' }
   }
+  if (!fila.confirmacion_trabajador && !fila.confirmacion_tecnico) {
+    return { error: 'Ninguna de las partes ha confirmado la resolución.' }
+  }
+
+  const { error } = await admin
+    .from('solicitudes')
+    .update({ confirmacion_trabajador: true, confirmacion_tecnico: true, estado: 'solucionado' })
+    .eq('id', solicitudId)
+
+  if (error) return { error: 'No se pudo marcar la solicitud como solucionada.' }
 }
 
-export async function forzarEstado(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  const estado = (formData.get('estado') as string | null) ?? ''
+export async function marcarTodosSolucionados(): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sesión expirada.' }
 
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('solicitudes')
+    .update({ confirmacion_trabajador: true, confirmacion_tecnico: true, estado: 'solucionado' })
+    .eq('estado', 'en_proceso')
+    .or('confirmacion_trabajador.eq.true,confirmacion_tecnico.eq.true')
+
+  if (error) return { error: 'No se pudieron marcar las solicitudes como solucionadas.' }
+}
+
+export async function cancelarSolicitudJefe(
+  { solicitudId }: { solicitudId: string },
+): Promise<ActionState> {
   if (!solicitudId) return { error: 'Solicitud no identificada.' }
-  if (estado !== 'solucionado' && estado !== 'no_solucionado') {
-    return { error: 'Estado no válido.' }
-  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -72,15 +65,11 @@ export async function forzarEstado(
 
   const admin = createAdminClient()
 
-  const updates =
-    estado === 'solucionado'
-      ? { estado, confirmacion_trabajador: true, confirmacion_tecnico: true }
-      : { estado }
-
   const { error } = await admin
     .from('solicitudes')
-    .update(updates)
+    .update({ estado: 'cancelado' })
     .eq('id', solicitudId)
+    .eq('estado', 'en_espera')
 
-  if (error) return { error: 'No se pudo forzar el estado.' }
+  if (error) return { error: 'No se pudo cancelar la solicitud.' }
 }

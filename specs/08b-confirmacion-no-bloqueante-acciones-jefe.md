@@ -1,6 +1,6 @@
 # SPEC 08b — Confirmación no bloqueante y acciones simplificadas del jefe
 
-> **Estado:** Draft
+> **Estado:** Implementado
 > **Depende de:** SPEC 08, SPEC 02, SPEC 05, SPEC 06
 > **Fecha:** 2026-06-10
 > **Objetivo:** Ajustar el flujo de doble confirmación de SPEC 08 para que

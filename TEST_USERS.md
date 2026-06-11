@@ -44,7 +44,7 @@ el Dashboard de Supabase (Auth → Users → Add user) o con el Admin SDK.
 | Campo      | Valor                           |
 | ---------- | ------------------------------- |
 | Email      | `trabajador100@muni-ica.gob.pe` |
-| Contraseña | `Trabajador2026!`               |
+| Contraseña | `trabajador100`               |
 | Username   | `trabajador_01`                 |
 | Rol        | `trabajador`                    |
 

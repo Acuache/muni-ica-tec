@@ -45,10 +45,22 @@ export default async function JefeSolicitudesPage({
     countQuery = countQuery.eq('estado', estadoFiltro)
   }
 
-  const [{ data: solicitudesRaw }, { count: totalItems }] = await Promise.all([
+  const conteoMarcarTodosQuery =
+    estadoFiltro === 'en_proceso'
+      ? supabase
+          .from('solicitudes')
+          .select('*', { count: 'exact', head: true })
+          .eq('estado', 'en_proceso')
+          .or('confirmacion_trabajador.eq.true,confirmacion_tecnico.eq.true')
+      : null
+
+  const [{ data: solicitudesRaw }, { count: totalItems }, conteoMarcarTodosResult] = await Promise.all([
     solicitudesQuery,
     countQuery,
+    conteoMarcarTodosQuery ?? Promise.resolve({ count: 0 }),
   ])
+
+  const conteoMarcarTodos = estadoFiltro === 'en_proceso' ? (conteoMarcarTodosResult.count ?? 0) : 0
 
   type PerfilTrabajador = {
     username: string
@@ -90,6 +102,7 @@ export default async function JefeSolicitudesPage({
       totalPaginas={totalPaginas}
       paginaActual={paginaActual}
       estadoFiltro={estadoFiltro}
+      conteoMarcarTodos={conteoMarcarTodos}
     />
   )
 }

@@ -128,6 +128,17 @@ export async function confirmarResolucionTecnico(
 
   if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
 
+  const { error: statusError } = await supabase
+    .from('technician_status')
+    .update({
+      estado: 'disponible',
+      atendiendo_solicitud_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('tecnico_id', user.id)
+
+  if (statusError) return { error: 'No se pudo actualizar tu estado.' }
+
   redirect('/tecnico')
 }
 

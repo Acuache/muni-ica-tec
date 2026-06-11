@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { toggleConfirmacionJefe, forzarEstado } from './actions'
+import { useState, useTransition } from 'react'
+import { marcarSolucionado, marcarTodosSolucionados, cancelarSolicitudJefe } from './actions'
 
 export type SolicitudTabla = {
   id: string
@@ -51,13 +51,18 @@ export default function TablaSolicitudes({
   totalPaginas,
   paginaActual,
   estadoFiltro,
+  conteoMarcarTodos,
 }: {
   solicitudes: SolicitudTabla[]
   totalPaginas: number
   paginaActual: number
   estadoFiltro: string | null
+  conteoMarcarTodos: number
 }) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [modalMarcarTodos, setModalMarcarTodos] = useState(false)
+  const [errorMarcarTodos, setErrorMarcarTodos] = useState<string | null>(null)
 
   function buildParams(page: number, estado: string | null) {
     const p = new URLSearchParams()
@@ -71,20 +76,43 @@ export default function TablaSolicitudes({
     router.push(buildParams(1, val === 'todos' ? null : val))
   }
 
+  function handleMarcarTodos() {
+    startTransition(async () => {
+      const result = await marcarTodosSolucionados()
+      if (result?.error) {
+        setErrorMarcarTodos(result.error)
+        return
+      }
+      setModalMarcarTodos(false)
+      router.refresh()
+    })
+  }
+
   return (
     <div>
       {/* Encabezado + filtro */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="font-semibold text-gray-800">Solicitudes</p>
-        <select
-          value={estadoFiltro ?? 'todos'}
-          onChange={handleFiltroChange}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
-        >
-          {ESTADO_OPCIONES.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          {estadoFiltro === 'en_proceso' && conteoMarcarTodos > 0 && (
+            <button
+              type="button"
+              onClick={() => setModalMarcarTodos(true)}
+              className="rounded-lg border border-green-500 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"
+            >
+              Marcar todos como Solucionado
+            </button>
+          )}
+          <select
+            value={estadoFiltro ?? 'todos'}
+            onChange={handleFiltroChange}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+          >
+            {ESTADO_OPCIONES.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Tabla */}
@@ -145,6 +173,73 @@ export default function TablaSolicitudes({
           </button>
         </div>
       </div>
+
+      {/* Modal: Marcar todos como Solucionado */}
+      <ModalConfirmacion
+        open={modalMarcarTodos}
+        title="Marcar todos como Solucionado"
+        message={`Se marcarán ${conteoMarcarTodos} solicitudes como Solucionado. ¿Continuar?`}
+        confirmLabel="Marcar todos"
+        pending={isPending}
+        error={errorMarcarTodos}
+        onConfirm={handleMarcarTodos}
+        onCancel={() => {
+          setModalMarcarTodos(false)
+          setErrorMarcarTodos(null)
+        }}
+      />
+    </div>
+  )
+}
+
+// ─── Modal de confirmación ─────────────────────────────────────────────────────
+
+function ModalConfirmacion({
+  open,
+  title,
+  message,
+  confirmLabel,
+  pending,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean
+  title: string
+  message: string
+  confirmLabel: string
+  pending: boolean
+  error?: string | null
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg">
+        <p className="font-semibold text-gray-900">{title}</p>
+        <p className="mt-2 text-sm text-gray-600">{message}</p>
+        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Volver
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? 'Procesando…' : confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -154,30 +249,35 @@ export default function TablaSolicitudes({
 function FilaTabla({ solicitud: s }: { solicitud: SolicitudTabla }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [modalCancelar, setModalCancelar] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const badge = ESTADO_BADGE[s.estado] ?? { label: s.estado, className: 'bg-gray-100 text-gray-600' }
 
-  function handleToggle(campo: 'trabajador' | 'tecnico', valorActual: boolean) {
-    const fd = new FormData()
-    fd.set('solicitud_id', s.id)
-    fd.set('campo', campo)
-    fd.set('valor', (!valorActual).toString())
+  function handleCancelar() {
     startTransition(async () => {
-      await toggleConfirmacionJefe(undefined, fd)
+      const result = await cancelarSolicitudJefe({ solicitudId: s.id })
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
+      setModalCancelar(false)
       router.refresh()
     })
   }
 
-  function handleForzar(estado: 'solucionado' | 'no_solucionado') {
-    const fd = new FormData()
-    fd.set('solicitud_id', s.id)
-    fd.set('estado', estado)
+  function handleMarcarSolucionado() {
     startTransition(async () => {
-      await forzarEstado(undefined, fd)
+      const result = await marcarSolucionado({ solicitudId: s.id })
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
       router.refresh()
     })
   }
 
   const tdBase = 'px-3 py-2 align-top text-gray-700'
+  const sinConfirmaciones = !s.confirmacion_trabajador && !s.confirmacion_tecnico
 
   return (
     <tr className={isPending ? 'opacity-50' : ''}>
@@ -222,44 +322,44 @@ function FilaTabla({ solicitud: s }: { solicitud: SolicitudTabla }) {
 
       {/* Acciones */}
       <td className="px-3 py-2 align-top">
-        <div className="flex flex-col gap-1 min-w-[160px]">
-          <div className="flex gap-1">
+        <div className="flex flex-col gap-1 min-w-[140px]">
+          {s.estado === 'en_espera' && (
             <button
               type="button"
               disabled={isPending}
-              onClick={() => handleToggle('trabajador', s.confirmacion_trabajador)}
-              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Trab. {s.confirmacion_trabajador ? '✓→✗' : '✗→✓'}
-            </button>
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => handleToggle('tecnico', s.confirmacion_tecnico)}
-              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Téc. {s.confirmacion_tecnico ? '✓→✗' : '✗→✓'}
-            </button>
-          </div>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => handleForzar('solucionado')}
-              className="rounded border border-green-400 px-2 py-0.5 text-xs text-green-700 hover:bg-green-50 disabled:opacity-50"
-            >
-              Forzar ✓
-            </button>
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => handleForzar('no_solucionado')}
+              onClick={() => setModalCancelar(true)}
               className="rounded border border-red-400 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
-              Forzar ✗
+              Cancelar
             </button>
-          </div>
+          )}
+          {s.estado === 'en_proceso' && (
+            <button
+              type="button"
+              disabled={isPending || sinConfirmaciones}
+              onClick={handleMarcarSolucionado}
+              className="rounded border border-green-400 px-2 py-0.5 text-xs text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Marcar Solucionado
+            </button>
+          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
+
+        {/* Modal: Cancelar solicitud */}
+        <ModalConfirmacion
+          open={modalCancelar}
+          title="Cancelar solicitud"
+          message="¿Cancelar esta solicitud?"
+          confirmLabel="Sí, cancelar"
+          pending={isPending}
+          error={error}
+          onConfirm={handleCancelar}
+          onCancel={() => {
+            setModalCancelar(false)
+            setError(null)
+          }}
+        />
       </td>
     </tr>
   )
