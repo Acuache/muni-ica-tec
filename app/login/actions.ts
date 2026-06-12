@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { esEmailValido, MAX_PASSWORD } from '@/lib/validacion'
 
 export type LoginState = { error: string } | undefined
 
@@ -22,6 +23,14 @@ export async function login(
     return { error: 'Completa todos los campos.' }
   }
 
+  if (!esEmailValido(email)) {
+    return { error: 'Escribe un correo válido.' }
+  }
+
+  if (password.length > MAX_PASSWORD) {
+    return { error: 'Correo o contraseña incorrectos.' }
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -39,13 +48,16 @@ export async function login(
     return { error: 'Rol de usuario no reconocido. Contacta al administrador.' }
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('primer_ingreso')
     .eq('id', data.user.id)
     .single()
 
-  if (profile?.primer_ingreso) {
+  // Si no se puede leer el perfil, no se puede saber si debe pasar por el
+  // primer ingreso: se le manda a /primer-ingreso, que redirige al panel
+  // si ya lo completó (fallo seguro).
+  if (profileError || profile?.primer_ingreso) {
     redirect('/primer-ingreso')
   }
 

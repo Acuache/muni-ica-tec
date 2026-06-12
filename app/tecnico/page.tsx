@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
+import { inicioDeHoyLima } from '@/lib/reportes/fechas'
 import TecnicoPanel from './panel'
 
 export type TecnicoEstado =
@@ -39,28 +41,30 @@ export default async function TecnicoPage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso')
+    .select('primer_ingreso, rol')
     .eq('id', user.id)
     .single()
 
+  if (profileError) {
+    throw new Error('No se pudo cargar tu perfil. Recarga la página.')
+  }
+
   if (profile?.primer_ingreso) redirect('/primer-ingreso')
 
-  // Inicio del día en UTC para el filtro FINALIZADAS HOY
-  const hoyInicio = new Date()
-  hoyInicio.setUTCHours(0, 0, 0, 0)
+  // El proxy enruta por metadata (editable por el usuario); el rol real
+  // se verifica aquí contra la base.
+  if (profile?.rol !== 'tecnico') {
+    redirect(PANEL_POR_ROL[profile?.rol as RolApp] ?? '/login')
+  }
 
-  const [
-    { data: techStatus },
-    { count: esperando },
-    { count: finalizadasHoy },
-  ] = await Promise.all([
+  const [statusResult, esperandoResult, finalizadasResult] = await Promise.all([
     supabase
       .from('technician_status')
       .select('estado, atendiendo_solicitud_id')
       .eq('tecnico_id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('solicitudes')
       .select('*', { count: 'exact', head: true })
@@ -69,10 +73,28 @@ export default async function TecnicoPage() {
       .from('solicitudes')
       .select('*', { count: 'exact', head: true })
       .eq('estado', 'solucionado')
-      .gte('updated_at', hoyInicio.toISOString()),
+      // Día "de hoy" según America/Lima, no medianoche UTC
+      .gte('updated_at', inicioDeHoyLima()),
   ])
 
-  const estadoTecnico = (techStatus?.estado ?? 'disponible') as TecnicoEstado
+  if (statusResult.error) {
+    throw new Error('No se pudo cargar tu estado. Recarga la página.')
+  }
+
+  // KPIs secundarios: si fallan se degradan a 0 sin tumbar el panel.
+  if (esperandoResult.error) {
+    console.error('TecnicoPage: conteo de en_espera falló', esperandoResult.error)
+  }
+  if (finalizadasResult.error) {
+    console.error('TecnicoPage: conteo de finalizadas hoy falló', finalizadasResult.error)
+  }
+
+  const esperando = esperandoResult.count
+  const finalizadasHoy = finalizadasResult.count
+
+  // Sin fila de estado (caso borde): se asume disponible; cambiarEstado
+  // crea la fila al primer cambio manual.
+  const estadoTecnico = (statusResult.data?.estado ?? 'disponible') as TecnicoEstado
 
   let solicitudActiva: SolicitudActiva | null = null
   let cola: SolicitudCola[] = []
@@ -86,12 +108,16 @@ export default async function TecnicoPage() {
   }
 
   if (estadoTecnico === 'atendiendo') {
-    const { data: sol } = await supabase
+    const { data: sol, error: solError } = await supabase
       .from('solicitudes')
       .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
       .eq('tecnico_id', user.id)
       .eq('estado', 'en_proceso')
       .maybeSingle()
+
+    if (solError) {
+      throw new Error('No se pudo cargar la solicitud en atención. Recarga la página.')
+    }
 
     if (sol) {
       const perfil = sol.profiles as unknown as PerfilTrabajador | null
@@ -107,11 +133,15 @@ export default async function TecnicoPage() {
       }
     }
   } else if (estadoTecnico !== 'descanso') {
-    const { data: colaData } = await supabase
+    const { data: colaData, error: colaError } = await supabase
       .from('solicitudes')
       .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
       .eq('estado', 'en_espera')
       .order('created_at', { ascending: true })
+
+    if (colaError) {
+      throw new Error('No se pudo cargar la cola de espera. Recarga la página.')
+    }
 
     cola = (colaData ?? []).map((s) => {
       const perfil = s.profiles as unknown as PerfilTrabajador | null

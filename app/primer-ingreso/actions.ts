@@ -2,6 +2,13 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import {
+  esEmailValido,
+  esTelefonoValido,
+  MAX_PASSWORD,
+  MAX_TEXTO_CORTO,
+  MIN_PASSWORD,
+} from '@/lib/validacion'
 
 export type PrimerIngresoState = { error: string } | undefined
 
@@ -33,6 +40,27 @@ export async function completarPrimerIngreso(
   if (!telefono) return { error: 'El campo Teléfono no puede estar vacío.' }
   if (!email) return { error: 'El campo de correo no puede estar vacío.' }
 
+  const textosCortos: [string, string][] = [
+    ['Lugar', lugar],
+    ['Área', area],
+    ['Puesto', puesto],
+    ['Nombre', nombre],
+    ['Apellido', apellido],
+  ]
+  for (const [campo, valor] of textosCortos) {
+    if (valor.length > MAX_TEXTO_CORTO) {
+      return { error: `El campo ${campo} no puede superar ${MAX_TEXTO_CORTO} caracteres.` }
+    }
+  }
+
+  if (!esTelefonoValido(telefono)) {
+    return { error: 'Escribe un teléfono válido (solo dígitos, espacios o guiones).' }
+  }
+
+  if (!esEmailValido(email)) {
+    return { error: 'Escribe un correo válido.' }
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -47,6 +75,12 @@ export async function completarPrimerIngreso(
   if (!mantenerPassword) {
     if (!nuevaPassword) {
       return { error: 'Escribe una nueva contraseña o activa el toggle para mantener la actual.' }
+    }
+    if (nuevaPassword.length < MIN_PASSWORD) {
+      return { error: `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.` }
+    }
+    if (nuevaPassword.length > MAX_PASSWORD) {
+      return { error: `La contraseña no puede superar ${MAX_PASSWORD} caracteres.` }
     }
     const { error: pwError } = await supabase.auth.updateUser({ password: nuevaPassword })
     if (pwError) {

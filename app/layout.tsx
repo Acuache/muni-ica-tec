@@ -1,18 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Roboto_Slab } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const robotoSlab = Roboto_Slab({subsets:['latin'],variable:'--font-serif'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Fuentes auto-hospedadas (mismas familias variables de Google Fonts, subset
+// latin) para que el build no dependa de descargar de fonts.googleapis.com.
+const robotoSlab = localFont({
+  src: "./fonts/roboto-slab-latin.woff2",
+  weight: "100 900",
+  variable: "--font-serif",
 });
 
-const geistMono = Geist_Mono({
+const geistSans = localFont({
+  src: "./fonts/geist-latin.woff2",
+  weight: "100 900",
+  variable: "--font-geist-sans",
+});
+
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin.woff2",
+  weight: "100 900",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {

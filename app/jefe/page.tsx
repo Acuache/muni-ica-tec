@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
+import { inicioDeHoyLima } from '@/lib/reportes/fechas'
 import JefePanel from './panel'
 
 export type TecnicoCard = {
@@ -19,44 +21,68 @@ export default async function JefePage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso')
+    .select('primer_ingreso, rol')
     .eq('id', user.id)
     .single()
 
+  if (profileError) {
+    throw new Error('No se pudo cargar tu perfil. Recarga la página.')
+  }
+
   if (profile?.primer_ingreso) redirect('/primer-ingreso')
 
-  const hoyInicio = new Date()
-  hoyInicio.setUTCHours(0, 0, 0, 0)
+  // El proxy enruta por metadata (editable por el usuario); el rol real
+  // se verifica aquí contra la base.
+  if (profile?.rol !== 'jefe') {
+    redirect(PANEL_POR_ROL[profile?.rol as RolApp] ?? '/login')
+  }
 
-  const [
-    { count: esperando },
-    { count: solucionadosHoy },
-    { count: noSolucionadosHoy },
-    { data: tecnicosRaw },
-  ] = await Promise.all([
-    supabase
-      .from('solicitudes')
-      .select('*', { count: 'exact', head: true })
-      .eq('estado', 'en_espera'),
-    supabase
-      .from('solicitudes')
-      .select('*', { count: 'exact', head: true })
-      .eq('estado', 'solucionado')
-      .gte('updated_at', hoyInicio.toISOString()),
-    supabase
-      .from('solicitudes')
-      .select('*', { count: 'exact', head: true })
-      .eq('estado', 'no_solucionado')
-      .gte('updated_at', hoyInicio.toISOString()),
-    supabase
-      .from('technician_status')
-      .select(
-        'tecnico_id, estado, ubicacion, atendiendo_solicitud_id, updated_at, profiles!tecnico_id(username)',
-      )
-      .order('tecnico_id', { ascending: true }),
-  ])
+  // Día "de hoy" según America/Lima, no medianoche UTC
+  const hoyInicio = inicioDeHoyLima()
+
+  const [esperandoResult, solucionadosResult, noSolucionadosResult, tecnicosResult] =
+    await Promise.all([
+      supabase
+        .from('solicitudes')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'en_espera'),
+      supabase
+        .from('solicitudes')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'solucionado')
+        .gte('updated_at', hoyInicio),
+      supabase
+        .from('solicitudes')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'no_solucionado')
+        .gte('updated_at', hoyInicio),
+      supabase
+        .from('technician_status')
+        .select(
+          'tecnico_id, estado, ubicacion, atendiendo_solicitud_id, updated_at, profiles!tecnico_id(username)',
+        )
+        .order('tecnico_id', { ascending: true }),
+    ])
+
+  if (tecnicosResult.error) {
+    throw new Error('No se pudo cargar el estado de los técnicos. Recarga la página.')
+  }
+
+  // KPIs: si un conteo falla se degrada a 0 sin tumbar el panel.
+  for (const [nombre, result] of [
+    ['esperando', esperandoResult],
+    ['solucionados hoy', solucionadosResult],
+    ['no solucionados hoy', noSolucionadosResult],
+  ] as const) {
+    if (result.error) console.error(`JefePage: conteo de ${nombre} falló`, result.error)
+  }
+
+  const esperando = esperandoResult.count
+  const solucionadosHoy = solucionadosResult.count
+  const noSolucionadosHoy = noSolucionadosResult.count
+  const tecnicosRaw = tecnicosResult.data
 
   const atendiendo = (tecnicosRaw ?? []).filter(
     (t) => t.estado === 'atendiendo' && t.atendiendo_solicitud_id,
@@ -65,10 +91,15 @@ export default async function JefePage() {
   const trabajadoresPorSolicitud: Record<string, string> = {}
   if (atendiendo.length > 0) {
     const ids = atendiendo.map((t) => t.atendiendo_solicitud_id as string)
-    const { data: solicitudesActivas } = await supabase
+    const { data: solicitudesActivas, error: activasError } = await supabase
       .from('solicitudes')
       .select('id, profiles!trabajador_id(username)')
       .in('id', ids)
+
+    // Dato secundario (nombre del trabajador atendido): se degrada a "—".
+    if (activasError) {
+      console.error('JefePage: lectura de solicitudes en atención falló', activasError)
+    }
 
     for (const sol of solicitudesActivas ?? []) {
       const username =

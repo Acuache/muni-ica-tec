@@ -1,7 +1,16 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
 import TablaSolicitudes from '../tabla-solicitudes'
 import type { SolicitudTabla } from '../tabla-solicitudes'
+
+const ESTADOS_VALIDOS = [
+  'en_espera',
+  'en_proceso',
+  'solucionado',
+  'no_solucionado',
+  'cancelado',
+]
 
 export default async function JefeSolicitudesPage({
   searchParams,
@@ -15,17 +24,29 @@ export default async function JefeSolicitudesPage({
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso')
+    .select('primer_ingreso, rol')
     .eq('id', user.id)
     .single()
 
+  if (profileError) {
+    throw new Error('No se pudo cargar tu perfil. Recarga la página.')
+  }
+
   if (profile?.primer_ingreso) redirect('/primer-ingreso')
 
+  if (profile?.rol !== 'jefe') {
+    redirect(PANEL_POR_ROL[profile?.rol as RolApp] ?? '/login')
+  }
+
+  // Parámetros de URL saneados: page no numérico cae a 1 y un estado fuera
+  // del enum se ignora (antes ?page=abc producía un range NaN en la query).
   const { page: pageParam, estado: estadoParam } = await searchParams
-  const paginaActual = Math.max(1, parseInt(pageParam ?? '1', 10))
-  const estadoFiltro = estadoParam && estadoParam !== 'todos' ? estadoParam : null
+  const pageNum = parseInt(pageParam ?? '1', 10)
+  const paginaActual = Number.isNaN(pageNum) ? 1 : Math.max(1, pageNum)
+  const estadoFiltro =
+    estadoParam && ESTADOS_VALIDOS.includes(estadoParam) ? estadoParam : null
   const offset = (paginaActual - 1) * 10
 
   let solicitudesQuery = supabase
@@ -54,12 +75,23 @@ export default async function JefeSolicitudesPage({
           .or('confirmacion_trabajador.eq.true,confirmacion_tecnico.eq.true')
       : null
 
-  const [{ data: solicitudesRaw }, { count: totalItems }, conteoMarcarTodosResult] = await Promise.all([
+  const [solicitudesResult, countResult, conteoMarcarTodosResult] = await Promise.all([
     solicitudesQuery,
     countQuery,
-    conteoMarcarTodosQuery ?? Promise.resolve({ count: 0 }),
+    conteoMarcarTodosQuery ?? Promise.resolve({ count: 0, error: null }),
   ])
 
+  if (solicitudesResult.error || countResult.error) {
+    throw new Error('No se pudieron cargar las solicitudes. Recarga la página.')
+  }
+
+  // Conteo del botón masivo: si falla se degrada a 0 (el botón no aparece).
+  if (conteoMarcarTodosResult.error) {
+    console.error('JefeSolicitudesPage: conteo de marcar todos falló', conteoMarcarTodosResult.error)
+  }
+
+  const solicitudesRaw = solicitudesResult.data
+  const totalItems = countResult.count
   const conteoMarcarTodos = estadoFiltro === 'en_proceso' ? (conteoMarcarTodosResult.count ?? 0) : 0
 
   type PerfilTrabajador = {

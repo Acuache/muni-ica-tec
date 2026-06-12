@@ -61,6 +61,14 @@ export function formatMesLabel(mesISO: string): string {
   return `${MESES[mes - 1]} ${anio}`
 }
 
+// Instante UTC (ISO) en que comenzó el día de hoy en America/Lima.
+// Para métricas "de hoy": medianoche de Lima, no medianoche UTC.
+export function inicioDeHoyLima(): string {
+  const limaWallClock = new Date(Date.now() - OFFSET_LIMA_MS)
+  limaWallClock.setUTCHours(0, 0, 0, 0)
+  return new Date(limaWallClock.getTime() + OFFSET_LIMA_MS).toISOString()
+}
+
 // Formatea un timestamp ISO (UTC) como "DD/MM/YYYY" en America/Lima.
 export function formatFechaLima(iso: string): string {
   const limaWallClock = new Date(new Date(iso).getTime() - OFFSET_LIMA_MS)

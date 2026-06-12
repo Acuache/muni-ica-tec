@@ -1,10 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Solo rutas internas: un `next` absoluto ("https://…") o protocol-relative
+// ("//evil.com") convertiría este callback en un open redirect.
+function destinoSeguro(next: string | null): string {
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\')) {
+    return next
+  }
+  return '/login'
+}
+
 export async function GET(request: NextRequest) {
   const url = request.nextUrl
   const code = url.searchParams.get('code')
-  const next = url.searchParams.get('next') ?? '/login'
+  const next = destinoSeguro(url.searchParams.get('next'))
   const origin = url.origin
 
   if (code) {

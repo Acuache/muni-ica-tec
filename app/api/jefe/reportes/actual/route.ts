@@ -11,7 +11,18 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.redirect(new URL('/login', request.url))
-  if (user.user_metadata?.rol !== 'jefe') {
+
+  // Rol real desde la base — user_metadata es editable por el propio usuario.
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError) {
+    return NextResponse.json({ error: 'No se pudo verificar la cuenta' }, { status: 500 })
+  }
+  if (profile?.rol !== 'jefe') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

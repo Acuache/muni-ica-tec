@@ -58,13 +58,15 @@ export default async function proxy(request: NextRequest) {
   // de "ruta de otro rol" que causaría un loop de redirecciones.
   if (user && path === '/primer-ingreso') {
     if (panel) {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('primer_ingreso')
         .eq('id', user.id)
         .single()
 
-      if (profile && !profile.primer_ingreso) {
+      // Si la consulta falla no se puede saber si ya completó el primer
+      // ingreso: se le deja en la página (fallo seguro, no loop).
+      if (!profileError && profile && !profile.primer_ingreso) {
         const url = request.nextUrl.clone()
         url.pathname = panel
         return NextResponse.redirect(url)
@@ -84,6 +86,14 @@ export default async function proxy(request: NextRequest) {
   if (user && panel && isProtected && !path.startsWith(panel)) {
     const url = request.nextUrl.clone()
     url.pathname = panel
+    return NextResponse.redirect(url)
+  }
+
+  // Con sesión pero rol no reconocido en ruta protegida → /login.
+  // Sin esto, una cuenta sin rol válido en metadata pasaría a cualquier panel.
+  if (user && !panel && isProtected) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 

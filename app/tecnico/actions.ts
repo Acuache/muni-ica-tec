@@ -1,7 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { autorizar } from '@/lib/autorizacion'
+import { esUuidValido } from '@/lib/validacion'
 
 export type ActionState = { error: string } | undefined
 
@@ -24,30 +25,67 @@ export async function cambiarEstado(
     return { error: 'Estado no válido.' }
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sesión expirada.' }
+  const auth = await autorizar(['tecnico'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase, user } = auth
 
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from('technician_status')
-    .select('estado')
+    .select('estado, atendiendo_solicitud_id')
     .eq('tecnico_id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (current?.estado === 'atendiendo') {
-    return {
-      error: 'No puedes cambiar tu estado mientras estás atendiendo una solicitud.',
-    }
+  if (currentError) return { error: 'No se pudo leer tu estado. Inténtalo de nuevo.' }
+
+  // Técnico sin fila de estado (caso borde): se crea con el estado pedido.
+  if (!current) {
+    const { error: insertError } = await supabase
+      .from('technician_status')
+      .insert({ tecnico_id: user.id, estado })
+    if (insertError) return { error: 'No se pudo actualizar el estado.' }
+    redirect('/tecnico')
   }
 
-  const { error } = await supabase
+  // "Atendiendo" solo bloquea si de verdad hay una solicitud en proceso a su
+  // nombre; un estado huérfano (la solicitud cambió por otra vía) se puede
+  // sobreescribir o el técnico quedaría atascado.
+  let huerfano = false
+  if (current.estado === 'atendiendo') {
+    const { data: activa, error: activaError } = await supabase
+      .from('solicitudes')
+      .select('id')
+      .eq('tecnico_id', user.id)
+      .eq('estado', 'en_proceso')
+      .limit(1)
+      .maybeSingle()
+
+    if (activaError) return { error: 'No se pudo leer tu estado. Inténtalo de nuevo.' }
+    if (activa) {
+      return {
+        error: 'No puedes cambiar tu estado mientras estás atendiendo una solicitud.',
+      }
+    }
+    huerfano = true
+  }
+
+  // Condicional por si el estado cambió entre la lectura y el update.
+  let query = supabase
     .from('technician_status')
-    .update({ estado, updated_at: new Date().toISOString() })
+    .update({ estado, atendiendo_solicitud_id: null })
     .eq('tecnico_id', user.id)
+  if (huerfano) {
+    query = current.atendiendo_solicitud_id
+      ? query.eq('atendiendo_solicitud_id', current.atendiendo_solicitud_id)
+      : query.is('atendiendo_solicitud_id', null)
+  } else {
+    query = query.neq('estado', 'atendiendo')
+  }
+  const { data, error } = await query.select('tecnico_id')
 
   if (error) return { error: 'No se pudo actualizar el estado.' }
+  if (!data || data.length === 0) {
+    return { error: 'Tu estado cambió mientras tanto. Actualiza la página.' }
+  }
 
   redirect('/tecnico')
 }
@@ -57,39 +95,24 @@ export async function atenderAhora(
   formData: FormData,
 ): Promise<ActionState> {
   const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  if (!solicitudId) return { error: 'Solicitud no identificada.' }
+  if (!esUuidValido(solicitudId)) return { error: 'Solicitud no identificada.' }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sesión expirada.' }
+  const auth = await autorizar(['tecnico'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase } = auth
 
-  // UPDATE condicional — first-write-wins
-  const { data, error } = await supabase
-    .from('solicitudes')
-    .update({ estado: 'en_proceso', tecnico_id: user.id })
-    .eq('id', solicitudId)
-    .eq('estado', 'en_espera')
-    .select('id')
+  // RPC atómica (migración spec10): asigna la solicitud y actualiza el
+  // estado del técnico en una sola transacción, first-write-wins.
+  const { data: tomada, error } = await supabase.rpc('atender_solicitud', {
+    p_solicitud_id: solicitudId,
+  })
 
   if (error) return { error: 'No se pudo tomar la solicitud.' }
 
-  if (!data || data.length === 0) {
+  if (!tomada) {
     // Otro técnico llegó primero — el cliente mostrará el toast y refrescará
     return { error: 'Este turno ya fue tomado por otro técnico.' }
   }
-
-  const { error: statusError } = await supabase
-    .from('technician_status')
-    .update({
-      estado: 'atendiendo',
-      atendiendo_solicitud_id: solicitudId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('tecnico_id', user.id)
-
-  if (statusError) return { error: 'No se pudo actualizar tu estado.' }
 
   redirect('/tecnico')
 }
@@ -99,41 +122,49 @@ export async function confirmarResolucionTecnico(
   formData: FormData,
 ): Promise<ActionState> {
   const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  if (!solicitudId) return { error: 'Solicitud no identificada.' }
+  if (!esUuidValido(solicitudId)) return { error: 'Solicitud no identificada.' }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sesión expirada.' }
+  const auth = await autorizar(['tecnico'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase, user } = auth
 
-  const { data: fila } = await supabase
+  const { data: fila, error: filaError } = await supabase
     .from('solicitudes')
     .select('confirmacion_trabajador')
     .eq('id', solicitudId)
     .eq('tecnico_id', user.id)
     .eq('estado', 'en_proceso')
-    .single()
+    .maybeSingle()
 
-  const updates = fila?.confirmacion_trabajador
+  if (filaError) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+  if (!fila) {
+    await liberarEstadoHuerfano(supabase, user.id, solicitudId)
+    return { error: 'La solicitud ya cambió de estado. Actualiza la página.' }
+  }
+
+  const updates = fila.confirmacion_trabajador
     ? { confirmacion_tecnico: true, estado: 'solucionado' }
     : { confirmacion_tecnico: true }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('solicitudes')
     .update(updates)
     .eq('id', solicitudId)
     .eq('tecnico_id', user.id)
     .eq('estado', 'en_proceso')
+    .select('id')
 
   if (error) return { error: 'No se pudo guardar la resolución. Inténtalo de nuevo.' }
+  if (!data || data.length === 0) {
+    await liberarEstadoHuerfano(supabase, user.id, solicitudId)
+    return { error: 'La solicitud ya cambió de estado. Actualiza la página.' }
+  }
 
   const { error: statusError } = await supabase
     .from('technician_status')
     .update({
       estado: 'disponible',
       atendiendo_solicitud_id: null,
-      updated_at: new Date().toISOString(),
     })
     .eq('tecnico_id', user.id)
 
@@ -147,32 +178,56 @@ export async function liberarSolicitud(
   formData: FormData,
 ): Promise<ActionState> {
   const solicitudId = (formData.get('solicitud_id') as string | null) ?? ''
-  if (!solicitudId) return { error: 'Solicitud no identificada.' }
+  if (!esUuidValido(solicitudId)) return { error: 'Solicitud no identificada.' }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sesión expirada.' }
+  const auth = await autorizar(['tecnico'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase, user } = auth
 
-  const { error: solError } = await supabase
+  // Condicionado a en_proceso: sin esa condición, liberar una solicitud ya
+  // solucionada/cerrada la reabría (volvía a en_espera).
+  const { data, error: solError } = await supabase
     .from('solicitudes')
     .update({ estado: 'en_espera', tecnico_id: null })
     .eq('id', solicitudId)
     .eq('tecnico_id', user.id)
+    .eq('estado', 'en_proceso')
+    .select('id')
 
   if (solError) return { error: 'No se pudo liberar la solicitud.' }
+  if (!data || data.length === 0) {
+    await liberarEstadoHuerfano(supabase, user.id, solicitudId)
+    return { error: 'La solicitud ya cambió de estado. Actualiza la página.' }
+  }
 
   const { error: statusError } = await supabase
     .from('technician_status')
     .update({
       estado: 'disponible',
       atendiendo_solicitud_id: null,
-      updated_at: new Date().toISOString(),
     })
     .eq('tecnico_id', user.id)
 
   if (statusError) return { error: 'No se pudo actualizar tu estado.' }
 
   redirect('/tecnico')
+}
+
+// Si el técnico quedó "atendiendo" una solicitud que ya no es suya (cambió
+// de estado por otra vía), restablece su estado para que no quede atascado
+// (cambiarEstado bloquea cualquier cambio mientras está "atendiendo").
+async function liberarEstadoHuerfano(
+  supabase: Awaited<ReturnType<typeof import('@/lib/supabase/server')['createClient']>>,
+  tecnicoId: string,
+  solicitudId: string,
+) {
+  const { error } = await supabase
+    .from('technician_status')
+    .update({ estado: 'disponible', atendiendo_solicitud_id: null })
+    .eq('tecnico_id', tecnicoId)
+    .eq('atendiendo_solicitud_id', solicitudId)
+
+  if (error) {
+    console.error('liberarEstadoHuerfano: no se pudo restablecer el estado', error)
+  }
 }
