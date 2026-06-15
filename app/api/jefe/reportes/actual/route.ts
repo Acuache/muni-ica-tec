@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: resultado.error }, { status: 500 })
   }
 
-  const pdf = construirPdfReporte(
+  const pdf = await construirPdfReporte(
     `Reporte mensual (parcial) — ${formatMesLabel(mes)}`,
     resultado.resumen,
     resultado.filas,

@@ -1,5 +1,8 @@
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+// jspdf y jspdf-autotable se importan de forma DINÁMICA dentro de
+// construirPdfReporte (SPEC 11, paso 7): así solo se cargan al GENERAR un
+// PDF, no al cargar el módulo de reportes. Son server-only (no entran al
+// bundle de cliente), pero el import dinámico también los saca del grafo
+// de servidor de la ruta hasta que se necesitan.
 
 export type FilaSolicitud = {
   fecha: string
@@ -21,11 +24,14 @@ export type ResumenMes = {
 
 const SIN_DATO = '—'
 
-export function construirPdfReporte(
+export async function construirPdfReporte(
   titulo: string,
   resumen: ResumenMes,
   filas: FilaSolicitud[],
-): Uint8Array {
+): Promise<Uint8Array> {
+  const { jsPDF } = await import('jspdf')
+  const { default: autoTable } = await import('jspdf-autotable')
+
   const doc = new jsPDF({ orientation: 'landscape' })
 
   doc.setFontSize(16)

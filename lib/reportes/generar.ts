@@ -78,7 +78,7 @@ export async function generarReporteMensual(mesISO: string): Promise<ResultadoGe
   const resultado = await obtenerFilasYResumen(inicio, fin)
   if ('error' in resultado) return resultado
 
-  const pdf = construirPdfReporte(
+  const pdf = await construirPdfReporte(
     `Reporte mensual — ${formatMesLabel(mesISO)}`,
     resultado.resumen,
     resultado.filas,

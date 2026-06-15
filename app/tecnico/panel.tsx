@@ -1,9 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState, useActionState } from 'react'
-import { useRouter } from 'next/navigation'
+import { memo, useCallback, useEffect, useState, useActionState } from 'react'
 import {
-  IconRefresh,
   IconCheck,
   IconBuilding,
   IconDeviceLaptop,
@@ -15,6 +13,8 @@ import {
 import { cambiarEstado, atenderAhora, liberarSolicitud, confirmarResolucionTecnico } from './actions'
 import type { ActionState } from './actions'
 import type { TecnicoEstado, SolicitudActiva, SolicitudCola } from './page'
+import { usePolling } from '@/lib/use-polling'
+import EtiquetaActualizado from '@/components/etiqueta-actualizado'
 
 type Props = {
   estadoTecnico: TecnicoEstado
@@ -39,13 +39,6 @@ const ESTADO_CONFIG: EstadoConfig[] = [
 
 const COLISION_MSG = 'Este turno ya fue tomado por otro técnico.'
 
-function formatTiempo(ms: number): string {
-  const seg = Math.floor(ms / 1000)
-  if (seg < 60) return `hace ${seg} seg`
-  const min = Math.floor(seg / 60)
-  return `hace ${min} min`
-}
-
 function ordinalCola(n: number): string {
   if (n === 1) return '1ero en cola'
   if (n === 2) return '2do en cola'
@@ -53,35 +46,9 @@ function ordinalCola(n: number): string {
   return `${n}to en cola`
 }
 
-export default function TecnicoPanel({
-  estadoTecnico,
-  esperando,
-  finalizadasHoy,
-  solicitudActiva,
-  cola,
-}: Props) {
-  const router = useRouter()
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
-  const [tiempoLabel, setTiempoLabel] = useState('ahora')
+export default function TecnicoPanel(props: Props) {
+  const { lastRefreshed, refresh } = usePolling(180_000)
   const [toast, setToast] = useState<string | null>(null)
-
-  // Polling cada 3 minutos
-  useEffect(() => {
-    const id = setInterval(() => {
-      router.refresh()
-      setLastRefreshed(new Date())
-    }, 180_000)
-    return () => clearInterval(id)
-  }, [router])
-
-  // Etiqueta "actualizado hace X"
-  useEffect(() => {
-    const id = setInterval(() => {
-      const diff = Date.now() - lastRefreshed.getTime()
-      setTiempoLabel(diff < 5000 ? 'ahora' : formatTiempo(diff))
-    }, 1000)
-    return () => clearInterval(id)
-  }, [lastRefreshed])
 
   // Auto-ocultar toast tras 4 s
   useEffect(() => {
@@ -90,16 +57,10 @@ export default function TecnicoPanel({
     return () => clearTimeout(id)
   }, [toast])
 
-  function handleRefresh() {
-    router.refresh()
-    setLastRefreshed(new Date())
-  }
-
   const handleColision = useCallback(() => {
     setToast(COLISION_MSG)
-    router.refresh()
-    setLastRefreshed(new Date())
-  }, [router])
+    refresh()
+  }, [refresh])
 
   return (
     <>
@@ -111,19 +72,25 @@ export default function TecnicoPanel({
         </div>
       )}
 
-      {/* Etiqueta de actualización + botón manual */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          aria-label="Refrescar"
-          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-        >
-          <IconRefresh size={14} />
-        </button>
-      </div>
+      <EtiquetaActualizado lastRefreshed={lastRefreshed} onRefresh={refresh} />
 
+      <ContenidoTecnico {...props} onColision={handleColision} />
+    </>
+  )
+}
+
+// Memoizado: un ciclo de polling con datos idénticos no re-renderiza el
+// contenido (SPEC 11, paso 5). onColision es estable (useCallback).
+const ContenidoTecnico = memo(
+  function ContenidoTecnico({
+    estadoTecnico,
+    esperando,
+    finalizadasHoy,
+    solicitudActiva,
+    cola,
+    onColision,
+  }: Props & { onColision: () => void }) {
+    return (
       <div className="space-y-4">
         {/* Métricas: ESPERANDO y FINALIZADAS HOY */}
         <div className="grid grid-cols-2 gap-3">
@@ -161,12 +128,15 @@ export default function TecnicoPanel({
 
         {/* Cola de Espera — oculta en descanso y atendiendo */}
         {estadoTecnico !== 'descanso' && estadoTecnico !== 'atendiendo' && (
-          <ColaEspera cola={cola} onColision={handleColision} />
+          <ColaEspera cola={cola} onColision={onColision} />
         )}
       </div>
-    </>
-  )
-}
+    )
+  },
+  (a, b) =>
+    JSON.stringify([a.estadoTecnico, a.esperando, a.finalizadasHoy, a.solicitudActiva, a.cola]) ===
+    JSON.stringify([b.estadoTecnico, b.esperando, b.finalizadasHoy, b.solicitudActiva, b.cola]),
+)
 
 // ─── Subcomponentes ────────────────────────────────────────────────────────────
 

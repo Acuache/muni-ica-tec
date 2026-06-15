@@ -46,16 +46,16 @@ export default async function JefePage() {
     await Promise.all([
       supabase
         .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('estado', 'en_espera'),
       supabase
         .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('estado', 'solucionado')
         .gte('updated_at', hoyInicio),
       supabase
         .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('estado', 'no_solucionado')
         .gte('updated_at', hoyInicio),
       supabase

@@ -59,7 +59,7 @@ export default async function JefeSolicitudesPage({
 
   let countQuery = supabase
     .from('solicitudes')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
 
   if (estadoFiltro) {
     solicitudesQuery = solicitudesQuery.eq('estado', estadoFiltro)
@@ -70,7 +70,7 @@ export default async function JefeSolicitudesPage({
     estadoFiltro === 'en_proceso'
       ? supabase
           .from('solicitudes')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('estado', 'en_proceso')
           .or('confirmacion_trabajador.eq.true,confirmacion_tecnico.eq.true')
       : null

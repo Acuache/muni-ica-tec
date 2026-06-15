@@ -67,11 +67,11 @@ export default async function TecnicoPage() {
       .maybeSingle(),
     supabase
       .from('solicitudes')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('estado', 'en_espera'),
     supabase
       .from('solicitudes')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('estado', 'solucionado')
       // Día "de hoy" según America/Lima, no medianoche UTC
       .gte('updated_at', inicioDeHoyLima()),

@@ -1,16 +1,17 @@
 'use client'
 
-import React, { useEffect, useRef, useState, useActionState } from 'react'
+import React, { memo, useEffect, useRef, useState, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   IconCirclePlus,
   IconUsersGroup,
   IconCircleCheck,
   IconCircleX,
-  IconRefresh,
 } from '@tabler/icons-react'
 import { crearSolicitud, cancelarSolicitud, confirmarResolucion } from './actions'
 import type { ActionState } from './actions'
+import { usePolling } from '@/lib/use-polling'
+import EtiquetaActualizado from '@/components/etiqueta-actualizado'
 
 type Solicitud = {
   id: string
@@ -31,54 +32,18 @@ type Props = {
   puesto: string | null
 }
 
-function formatTiempo(ms: number): string {
-  const seg = Math.floor(ms / 1000)
-  if (seg < 60) return `hace ${seg} seg`
-  const min = Math.floor(seg / 60)
-  return `hace ${min} min`
+// No refrescar automáticamente mientras el usuario escribe en un campo.
+function sinCampoEnfocado(): boolean {
+  const el = document.activeElement
+  return !(
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLSelectElement ||
+    el instanceof HTMLTextAreaElement
+  )
 }
 
-export default function TrabajadorPanel({
-  solicitudActiva,
-  posicionCola,
-  tecnicoNombre,
-  lugar,
-  area,
-  puesto,
-}: Props) {
-  const router = useRouter()
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
-  const [tiempoLabel, setTiempoLabel] = useState('ahora')
-
-  // Polling cada 3 minutos — pausa si hay un campo de formulario con foco
-  useEffect(() => {
-    const id = setInterval(() => {
-      const el = document.activeElement
-      const isFormField =
-        el instanceof HTMLInputElement ||
-        el instanceof HTMLSelectElement ||
-        el instanceof HTMLTextAreaElement
-      if (!isFormField) {
-        router.refresh()
-        setLastRefreshed(new Date())
-      }
-    }, 180_000)
-    return () => clearInterval(id)
-  }, [router])
-
-  // Actualizar etiqueta "actualizado hace X" cada segundo
-  useEffect(() => {
-    const id = setInterval(() => {
-      const diff = Date.now() - lastRefreshed.getTime()
-      setTiempoLabel(diff < 5000 ? 'ahora' : formatTiempo(diff))
-    }, 1000)
-    return () => clearInterval(id)
-  }, [lastRefreshed])
-
-  function handleRefresh() {
-    router.refresh()
-    setLastRefreshed(new Date())
-  }
+export default function TrabajadorPanel(props: Props) {
+  const { lastRefreshed, refresh } = usePolling(180_000, sinCampoEnfocado)
 
   return (
     <>
@@ -89,32 +54,44 @@ export default function TrabajadorPanel({
         Reporta cualquier incidencia técnica de manera inmediata.
       </p>
 
-      {/* Etiqueta de actualización + botón manual */}
-      <div className="mb-5 flex items-center gap-2">
-        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          aria-label="Refrescar"
-          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-        >
-          <IconRefresh size={14} />
-        </button>
-      </div>
+      <EtiquetaActualizado
+        lastRefreshed={lastRefreshed}
+        onRefresh={refresh}
+        className="mb-5 flex items-center gap-2"
+      />
 
-      {solicitudActiva ? (
-        <PantallaSeguimiento
-          solicitud={solicitudActiva}
-          posicionCola={posicionCola}
-          tecnicoNombre={tecnicoNombre}
-          onRefresh={() => router.refresh()}
-        />
-      ) : (
-        <FormularioNuevaSolicitud lugar={lugar} area={area} puesto={puesto} />
-      )}
+      <ContenidoTrabajador {...props} onRefresh={refresh} />
     </>
   )
 }
+
+// Memoizado: un ciclo de polling con datos idénticos no re-renderiza el
+// contenido (SPEC 11, paso 5). onRefresh es estable (useCallback en el hook).
+const ContenidoTrabajador = memo(
+  function ContenidoTrabajador({
+    solicitudActiva,
+    posicionCola,
+    tecnicoNombre,
+    lugar,
+    area,
+    puesto,
+    onRefresh,
+  }: Props & { onRefresh: () => void }) {
+    return solicitudActiva ? (
+      <PantallaSeguimiento
+        solicitud={solicitudActiva}
+        posicionCola={posicionCola}
+        tecnicoNombre={tecnicoNombre}
+        onRefresh={onRefresh}
+      />
+    ) : (
+      <FormularioNuevaSolicitud lugar={lugar} area={area} puesto={puesto} />
+    )
+  },
+  (a, b) =>
+    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.lugar, a.area, a.puesto]) ===
+    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.lugar, b.area, b.puesto]),
+)
 
 function FormularioNuevaSolicitud({
   lugar,

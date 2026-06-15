@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { IconRefresh } from '@tabler/icons-react'
+import { memo, useEffect, useState } from 'react'
 import type { TecnicoCard } from './page'
+import { usePolling } from '@/lib/use-polling'
+import EtiquetaActualizado from '@/components/etiqueta-actualizado'
 
 type Props = {
   esperando: number
@@ -12,61 +12,23 @@ type Props = {
   tecnicos: TecnicoCard[]
 }
 
-function formatTiempo(ms: number): string {
-  const seg = Math.floor(ms / 1000)
-  if (seg < 60) return `hace ${seg} seg`
-  const min = Math.floor(seg / 60)
-  return `hace ${min} min`
-}
-
-export default function JefePanel({
-  esperando,
-  solucionadosHoy,
-  noSolucionadosHoy,
-  tecnicos,
-}: Props) {
-  const router = useRouter()
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date())
-  const [tiempoLabel, setTiempoLabel] = useState('ahora')
-
-  // Polling cada 3 minutos
-  useEffect(() => {
-    const id = setInterval(() => {
-      router.refresh()
-      setLastRefreshed(new Date())
-    }, 180_000)
-    return () => clearInterval(id)
-  }, [router])
-
-  // Etiqueta "actualizado hace X"
-  useEffect(() => {
-    const id = setInterval(() => {
-      const diff = Date.now() - lastRefreshed.getTime()
-      setTiempoLabel(diff < 5000 ? 'ahora' : formatTiempo(diff))
-    }, 1000)
-    return () => clearInterval(id)
-  }, [lastRefreshed])
-
-  function handleRefresh() {
-    router.refresh()
-    setLastRefreshed(new Date())
-  }
+export default function JefePanel(props: Props) {
+  const { lastRefreshed, refresh } = usePolling(180_000)
 
   return (
     <>
-      {/* Etiqueta de actualización + botón manual */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-xs text-gray-400">actualizado {tiempoLabel}</span>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          aria-label="Refrescar"
-          className="rounded p-0.5 text-gray-400 transition-colors hover:text-blue-600"
-        >
-          <IconRefresh size={14} />
-        </button>
-      </div>
+      <EtiquetaActualizado lastRefreshed={lastRefreshed} onRefresh={refresh} />
+      <ContenidoJefe {...props} />
+    </>
+  )
+}
 
+// Memoizado: un ciclo de polling con datos idénticos no re-renderiza el
+// contenido (SPEC 11, paso 5). Las tarjetas de técnico mantienen su propio
+// tick interno "Xs act." aunque el contenido no se re-renderice.
+const ContenidoJefe = memo(
+  function ContenidoJefe({ esperando, solucionadosHoy, noSolucionadosHoy, tecnicos }: Props) {
+    return (
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <KpiCards
           esperando={esperando}
@@ -75,9 +37,12 @@ export default function JefePanel({
         />
         <EstadoTecnicos tecnicos={tecnicos} />
       </div>
-    </>
-  )
-}
+    )
+  },
+  (a, b) =>
+    JSON.stringify([a.esperando, a.solucionadosHoy, a.noSolucionadosHoy, a.tecnicos]) ===
+    JSON.stringify([b.esperando, b.solucionadosHoy, b.noSolucionadosHoy, b.tecnicos]),
+)
 
 // ─── Subcomponentes ────────────────────────────────────────────────────────────
 
