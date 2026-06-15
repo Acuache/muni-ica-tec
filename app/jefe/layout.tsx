@@ -12,11 +12,16 @@ export default async function JefeLayout({
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Solo el nombre del header (decorativo): si falla se degrada a vacío.
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', user.id)
     .single()
+
+  if (profileError) {
+    console.error('JefeLayout: lectura de username falló', profileError)
+  }
 
   return (
     <JefeShell username={profile?.username ?? ''}>{children}</JefeShell>

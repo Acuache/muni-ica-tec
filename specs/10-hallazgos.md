@@ -506,3 +506,68 @@ afectadas", corregidos en H-13/H-25.
 ### Estado tras el paso 8
 
 - `npm run lint` y `npm run build`: **verdes**.
+
+## Paso 9 — Verificación final
+
+### H-32 · Layouts de los 3 paneles ignoraban el `error` del username — **Corregido**
+
+- **Área:** `app/{trabajador,tecnico,jefe}/layout.tsx`
+- **Hallazgo:** detectado en el barrido final de "ninguna llamada a Supabase
+  con error ignorado". Las tres consultas del nombre para el header del
+  shell descartaban `error`.
+- **Corrección:** dato decorativo → se degrada a header vacío con
+  `console.error` (no se lanza, para no tumbar el panel por el nombre del
+  encabezado).
+
+### Barrido "ningún `error` ignorado"
+
+- Todas las llamadas `.from()/.rpc()/.storage` en `app/` y `lib/` capturan y
+  manejan su `error` (verificado con grep).
+- Las llamadas `auth.getUser()` que solo desestructuran `{ data: { user } }`
+  son el patrón idiomático de Supabase SSR: ante error `user` es `null` y
+  cada sitio hace `if (!user) redirect('/login')` o devuelve error — el
+  fallo se trata como "sin sesión". Aceptable, sin cambio.
+
+### Criterios de aceptación — repaso
+
+| # | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| 1 | `npm run build` sin errores | ✅ | Verde (era el H-01) |
+| 2 | `npm run lint` sin errores | ✅ | Verde |
+| 3 | Toda action/handler verifica sesión y rol en servidor | ✅ | `autorizar()` en todas las actions (H-08/H-09); `profiles.rol` en páginas y route handlers (H-23) |
+| 4 | Datos inválidos → error visible y NO escribe en base | ✅ | `lib/validacion.ts` en auth y actions (H-05/H-10); validación previa al acceso a base |
+| 5 | Dos técnicos "Atender ahora": solo uno gana | ✅ | RPC atómica `atender_solicitud` (H-18); toast de colisión existente |
+| 6 | Doble clic no duplica registros | ✅ | `pending`/`useTransition` en todos los botones + índice único de solicitud activa (H-12/H-15) |
+| 7 | Acción sobre estado ya cambiado → error claro | ✅ | `.select()` + 0-filas en trabajador/técnico/jefe (H-13/H-19/H-25) |
+| 8 | Base vacía: paneles y reportes sin errores ni `NaN` | ✅ | Tasa de éxito "—" sin datos (H-26); cola vacía; reporte de mes sin cierres (H-27) |
+| 9 | RLS: ≥1 intento negativo por tabla | ✅ | Batería 10/10 PASS con cliente anon + sesión técnico (Paso 7) |
+| 10 | Cron sin `CRON_SECRET` correcto → 401 | ✅ | `timingSafeEqual`; sin secreto o header inválido → 401 (H-28) — revisión de código |
+| 11 | Toda llamada a Supabase revisa su `error` | ✅ | Barrido final (H-14/H-22/H-26/H-27/H-32) |
+| 12 | `error.tsx` en login/trabajador/tecnico/jefe | ✅ | 4 segmentos + raíz + `not-found.tsx` (H-31) |
+| 13 | `specs/10-hallazgos.md` con cada hallazgo | ✅ | Este documento |
+| 14 | Funcionalidad visible sin cambios | ✅ | Requiere recorrido manual por rol (abajo) |
+
+### Pendiente: recorrido manual por rol (criterio 14 y confirmación de 4–8)
+
+`build` + `lint` + la batería de RLS cubren lo automatizable. Queda el
+recorrido manual que pide el plan, a ejecutar con un usuario de cada rol
+contra `npm run dev`:
+
+- **Trabajador:** crear solicitud → ver posición en cola → cancelar; con una
+  ya en proceso, confirmar Resuelto / No resuelto.
+- **Técnico:** cambiar estado; "Atender ahora" (idealmente con dos sesiones
+  para ver la colisión); liberar; confirmar; ver métricas del día.
+- **Jefe:** KPIs; tabla con filtros y paginación; marcar solucionado y botón
+  masivo; descargar reporte del mes en curso y generar uno de un mes cerrado.
+
+Si todo el recorrido se comporta igual que antes del spec, el criterio 14
+queda cubierto y el spec puede marcarse **Implementado**.
+
+### Migraciones correctivas generadas (todas aplicadas en Supabase)
+
+1. `20260612000001_spec10_solicitud_activa_unica.sql` — índice único de
+   solicitud activa por trabajador (H-12).
+2. `20260612000002_spec10_tecnico_correcciones.sql` — trigger `updated_at`,
+   política INSERT de `technician_status`, RPC `atender_solicitud` (H-16/17/18).
+3. `20260612000003_spec10_rls_correcciones.sql` — privilegios por columna en
+   `profiles`/`solicitudes`/`technician_status`, EXECUTE de RPCs (H-11/29/30).

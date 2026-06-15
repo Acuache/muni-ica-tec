@@ -12,11 +12,16 @@ export default async function TecnicoLayout({
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Solo el nombre del header (decorativo): si falla se degrada a vacío.
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', user.id)
     .single()
+
+  if (profileError) {
+    console.error('TecnicoLayout: lectura de username falló', profileError)
+  }
 
   return (
     <TecnicoShell username={profile?.username ?? ''}>
