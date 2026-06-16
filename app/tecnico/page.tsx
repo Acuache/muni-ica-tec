@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
 import { inicioDeHoyLima } from '@/lib/reportes/fechas'
+import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
 import TecnicoPanel from './panel'
 
 export type TecnicoEstado =
@@ -20,6 +21,7 @@ export type SolicitudActiva = {
   lugar: string
   area: string
   puesto: string
+  adjuntos: AdjuntoVista[]
 }
 
 export type SolicitudCola = {
@@ -121,6 +123,17 @@ export default async function TecnicoPage() {
 
     if (sol) {
       const perfil = sol.profiles as unknown as PerfilTrabajador | null
+
+      const { data: adjData, error: adjError } = await supabase
+        .from('solicitud_adjuntos')
+        .select('id, tipo, nombre_original, tamano_bytes')
+        .eq('solicitud_id', sol.id)
+        .order('created_at', { ascending: true })
+
+      if (adjError) {
+        console.error('TecnicoPage: lectura de adjuntos falló', adjError)
+      }
+
       solicitudActiva = {
         id: sol.id,
         titulo: sol.titulo,
@@ -130,6 +143,7 @@ export default async function TecnicoPage() {
         lugar: perfil?.lugar ?? '',
         area: perfil?.area ?? '',
         puesto: perfil?.puesto ?? '',
+        adjuntos: (adjData as AdjuntoVista[]) ?? [],
       }
     }
   } else if (estadoTecnico !== 'descanso') {

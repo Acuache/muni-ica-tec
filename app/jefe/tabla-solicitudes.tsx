@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { marcarSolucionado, marcarTodosSolucionados, cancelarSolicitudJefe } from './actions'
+import AdjuntosLista from '@/components/adjuntos-lista'
+import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
 
 export type SolicitudTabla = {
   id: string
@@ -20,6 +22,7 @@ export type SolicitudTabla = {
   trabajador_puesto: string | null
   tecnico_nombre: string | null
   tecnico_email: string | null
+  adjuntos: AdjuntoVista[]
 }
 
 const ESTADO_OPCIONES = [
@@ -291,8 +294,13 @@ function FilaTabla({ solicitud: s }: { solicitud: SolicitudTabla }) {
         <span className="block text-gray-400">{s.trabajador_puesto ?? '—'}</span>
       </td>
       <td className={tdBase}>{s.titulo}</td>
-      <td className={`${tdBase} max-w-[160px]`}>
+      <td className={`${tdBase} max-w-[200px]`}>
         <span className="line-clamp-2">{s.descripcion ?? '—'}</span>
+        {s.adjuntos.length > 0 && (
+          <div className="mt-2">
+            <AdjuntosLista adjuntos={s.adjuntos} titulo="Archivos" />
+          </div>
+        )}
       </td>
       <td className={`${tdBase} whitespace-nowrap`}>{s.tecnico_nombre ?? '—'}</td>
       <td className={tdBase}>{s.tecnico_email ?? '—'}</td>

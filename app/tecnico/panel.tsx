@@ -15,6 +15,7 @@ import type { ActionState } from './actions'
 import type { TecnicoEstado, SolicitudActiva, SolicitudCola } from './page'
 import { usePolling } from '@/lib/use-polling'
 import EtiquetaActualizado from '@/components/etiqueta-actualizado'
+import AdjuntosLista from '@/components/adjuntos-lista'
 
 type Props = {
   estadoTecnico: TecnicoEstado
@@ -242,6 +243,12 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
         <p className="mt-2 inline-block rounded bg-white px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
           Código AnyDesk: {solicitud.anydesk_code}
         </p>
+      )}
+
+      {solicitud.adjuntos.length > 0 && (
+        <div className="mt-3 border-t border-blue-200 pt-3">
+          <AdjuntosLista adjuntos={solicitud.adjuntos} titulo="Archivos del trabajador" />
+        </div>
       )}
 
       <form action={resolverAction} className="mt-3">

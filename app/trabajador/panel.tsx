@@ -8,10 +8,20 @@ import {
   IconCircleCheck,
   IconCircleX,
 } from '@tabler/icons-react'
-import { crearSolicitud, cancelarSolicitud, confirmarResolucion } from './actions'
+import {
+  crearSolicitud,
+  cancelarSolicitud,
+  confirmarResolucion,
+  registrarAdjuntos,
+} from './actions'
 import type { ActionState } from './actions'
+import { createClient } from '@/lib/supabase/client'
+import type { AdjuntoMeta } from '@/lib/adjuntos/tipos'
 import { usePolling } from '@/lib/use-polling'
 import EtiquetaActualizado from '@/components/etiqueta-actualizado'
+import AdjuntosLista from '@/components/adjuntos-lista'
+import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
+import AdjuntosSelector, { type StagedAdjunto } from './adjuntos-selector'
 
 type Solicitud = {
   id: string
@@ -27,6 +37,7 @@ type Props = {
   solicitudActiva: Solicitud | null
   posicionCola: number
   tecnicoNombre: string | null
+  adjuntos: AdjuntoVista[]
   lugar: string | null
   area: string | null
   puesto: string | null
@@ -72,6 +83,7 @@ const ContenidoTrabajador = memo(
     solicitudActiva,
     posicionCola,
     tecnicoNombre,
+    adjuntos,
     lugar,
     area,
     puesto,
@@ -82,6 +94,7 @@ const ContenidoTrabajador = memo(
         solicitud={solicitudActiva}
         posicionCola={posicionCola}
         tecnicoNombre={tecnicoNombre}
+        adjuntos={adjuntos}
         onRefresh={onRefresh}
       />
     ) : (
@@ -89,8 +102,8 @@ const ContenidoTrabajador = memo(
     )
   },
   (a, b) =>
-    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.lugar, a.area, a.puesto]) ===
-    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.lugar, b.area, b.puesto]),
+    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.adjuntos, a.lugar, a.area, a.puesto]) ===
+    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.adjuntos, b.lugar, b.area, b.puesto]),
 )
 
 function FormularioNuevaSolicitud({
@@ -103,21 +116,16 @@ function FormularioNuevaSolicitud({
   puesto: string | null
 }) {
   const router = useRouter()
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    crearSolicitud,
-    undefined,
-  )
-  const wasPendingRef = useRef(false)
+  const [supabase] = useState(() => createClient())
   const [tipoAyuda, setTipoAyuda] = useState('')
   const [anydesk, setAnydesk] = useState('')
   const [anyDeskError, setAnyDeskError] = useState('')
-
-  useEffect(() => {
-    if (wasPendingRef.current && !pending && state === undefined) {
-      router.refresh()
-    }
-    wasPendingRef.current = pending
-  }, [pending, state, router])
+  const [staged, setStaged] = useState<StagedAdjunto[]>([])
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // Si la solicitud ya se creó pero falló alguna subida, guardamos su id para
+  // reintentar solo los archivos sin volver a crearla (SPEC 12).
+  const [creadaId, setCreadaId] = useState<string | null>(null)
 
   function handleTipoAyudaChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value
@@ -128,10 +136,81 @@ function FormularioNuevaSolicitud({
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  // Envío en dos pasos: crea la solicitud, sube los archivos a Storage y
+  // registra sus metadatos; al terminar refresca a la pantalla de seguimiento.
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     if (tipoAyuda === 'virtual' && !/^\d+$/.test(anydesk)) {
-      e.preventDefault()
       setAnyDeskError('El código AnyDesk debe contener solo números.')
+      return
+    }
+    setError(null)
+    const formData = new FormData(e.currentTarget)
+    setPending(true)
+    try {
+      let solicitudId = creadaId
+      if (!solicitudId) {
+        const res = await crearSolicitud(undefined, formData)
+        if (!res || 'error' in res) {
+          setError(res?.error ?? 'No se pudo crear la solicitud.')
+          return
+        }
+        solicitudId = res.solicitudId
+        setCreadaId(solicitudId)
+      }
+
+      if (staged.length > 0) {
+        const metas: AdjuntoMeta[] = []
+        const fallidos: StagedAdjunto[] = []
+        for (const s of staged) {
+          const ext = s.tipo === 'imagen' ? 'webp' : 'pdf'
+          const path = `${solicitudId}/${crypto.randomUUID()}.${ext}`
+          const { error: upError } = await supabase.storage
+            .from('solicitud-adjuntos')
+            .upload(path, s.blob, {
+              contentType: s.tipo === 'imagen' ? 'image/webp' : 'application/pdf',
+              upsert: false,
+            })
+          if (upError) {
+            fallidos.push(s)
+            continue
+          }
+          metas.push({
+            tipo: s.tipo,
+            storage_path: path,
+            nombre_original: s.nombre,
+            tamano_bytes: s.tamano,
+          })
+        }
+
+        if (metas.length > 0) {
+          const reg = await registrarAdjuntos(solicitudId, metas)
+          if (reg && 'error' in reg) {
+            setError(
+              'La solicitud se creó, pero no se pudieron registrar algunos archivos. Toca "Reintentar subida".',
+            )
+            return
+          }
+        }
+
+        if (fallidos.length > 0) {
+          // Conservar solo los que fallaron para reintentar; liberar el resto.
+          staged
+            .filter((s) => !fallidos.includes(s))
+            .forEach((s) => {
+              if (s.previewUrl) URL.revokeObjectURL(s.previewUrl)
+            })
+          setStaged(fallidos)
+          setError(
+            `No se pudieron subir ${fallidos.length} archivo(s). Toca "Reintentar subida".`,
+          )
+          return
+        }
+      }
+
+      router.refresh()
+    } finally {
+      setPending(false)
     }
   }
 
@@ -166,7 +245,7 @@ function FormularioNuevaSolicitud({
         </div>
       </div>
 
-      <form action={action} onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="tipo_ayuda" className="block text-sm font-medium text-gray-700">
             Tipo de ayuda
@@ -239,9 +318,11 @@ function FormularioNuevaSolicitud({
           />
         </div>
 
-        {state?.error && (
+        <AdjuntosSelector staged={staged} setStaged={setStaged} disabled={pending} />
+
+        {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-            {state.error}
+            {error}
           </p>
         )}
 
@@ -250,7 +331,11 @@ function FormularioNuevaSolicitud({
           disabled={pending}
           className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? 'Enviando…' : 'Enviar Solicitud'}
+          {pending
+            ? 'Enviando…'
+            : creadaId
+              ? 'Reintentar subida'
+              : 'Enviar Solicitud'}
         </button>
       </form>
     </div>
@@ -261,16 +346,18 @@ function PantallaSeguimiento({
   solicitud,
   posicionCola,
   tecnicoNombre,
+  adjuntos,
   onRefresh,
 }: {
   solicitud: Solicitud
   posicionCola: number
   tecnicoNombre: string | null
+  adjuntos: AdjuntoVista[]
   onRefresh: () => void
 }) {
   return (
     <div className="space-y-4">
-      <CardEstado solicitud={solicitud} />
+      <CardEstado solicitud={solicitud} adjuntos={adjuntos} />
       {solicitud.estado === 'en_espera' && (
         <CardPosicionCola posicion={posicionCola} />
       )}
@@ -385,7 +472,13 @@ const ESTADO_BADGE: Record<string, { label: string; class: string }> = {
   cancelado:      { label: 'Cancelado',     class: 'bg-gray-100 text-gray-600' },
 }
 
-function CardEstado({ solicitud }: { solicitud: Solicitud }) {
+function CardEstado({
+  solicitud,
+  adjuntos,
+}: {
+  solicitud: Solicitud
+  adjuntos: AdjuntoVista[]
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     cancelarSolicitud,
     undefined,
@@ -417,6 +510,11 @@ function CardEstado({ solicitud }: { solicitud: Solicitud }) {
       </div>
       {state?.error && (
         <p className="mt-2 text-xs text-red-600">{state.error}</p>
+      )}
+      {adjuntos.length > 0 && (
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <AdjuntosLista adjuntos={adjuntos} titulo="Archivos adjuntos" />
+        </div>
       )}
     </div>
   )

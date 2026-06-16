@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
+import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
 import TablaSolicitudes from '../tabla-solicitudes'
 import type { SolicitudTabla } from '../tabla-solicitudes'
 
@@ -52,7 +53,7 @@ export default async function JefeSolicitudesPage({
   let solicitudesQuery = supabase
     .from('solicitudes')
     .select(
-      'id, created_at, titulo, descripcion, estado, confirmacion_trabajador, confirmacion_tecnico, trabajador:profiles!trabajador_id(username, telefono, email, lugar, area, puesto), tecnico:profiles!tecnico_id(username, email)',
+      'id, created_at, titulo, descripcion, estado, confirmacion_trabajador, confirmacion_tecnico, trabajador:profiles!trabajador_id(username, telefono, email, lugar, area, puesto), tecnico:profiles!tecnico_id(username, email), adjuntos:solicitud_adjuntos(id, tipo, nombre_original, tamano_bytes)',
     )
     .order('created_at', { ascending: false })
     .range(offset, offset + 9)
@@ -123,6 +124,7 @@ export default async function JefeSolicitudesPage({
       trabajador_puesto: trabajador?.puesto ?? null,
       tecnico_nombre: tecnico?.username ?? null,
       tecnico_email: tecnico?.email ?? null,
+      adjuntos: (s.adjuntos as unknown as AdjuntoVista[]) ?? [],
     }
   })
 

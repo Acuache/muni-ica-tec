@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
+import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
 import TrabajadorPanel from './panel'
 
 export default async function TrabajadorPage() {
@@ -43,6 +44,7 @@ export default async function TrabajadorPage() {
 
   let posicionCola = 0
   let tecnicoNombre: string | null = null
+  let adjuntos: AdjuntoVista[] = []
 
   if (solicitudActiva) {
     const tecnicoQuery = solicitudActiva.tecnico_id
@@ -53,20 +55,29 @@ export default async function TrabajadorPage() {
           .single()
       : null
 
-    const [posicionResult, tecnicoResult] = await Promise.all([
+    const [posicionResult, tecnicoResult, adjuntosResult] = await Promise.all([
       supabase.rpc('get_posicion_en_cola', { p_solicitud_id: solicitudActiva.id }),
       tecnicoQuery,
+      supabase
+        .from('solicitud_adjuntos')
+        .select('id, tipo, nombre_original, tamano_bytes')
+        .eq('solicitud_id', solicitudActiva.id)
+        .order('created_at', { ascending: true }),
     ])
     // Datos secundarios: si fallan se degrada a posición 0 / técnico sin
-    // nombre en vez de tumbar el panel.
+    // nombre / sin adjuntos en vez de tumbar el panel.
     if (posicionResult.error) {
       console.error('TrabajadorPage: get_posicion_en_cola falló', posicionResult.error)
     }
     if (tecnicoResult?.error) {
       console.error('TrabajadorPage: lectura de técnico falló', tecnicoResult.error)
     }
+    if (adjuntosResult.error) {
+      console.error('TrabajadorPage: lectura de adjuntos falló', adjuntosResult.error)
+    }
     posicionCola = posicionResult.data ?? 0
     tecnicoNombre = tecnicoResult?.data?.username ?? null
+    adjuntos = (adjuntosResult.data as AdjuntoVista[]) ?? []
   }
 
   return (
@@ -74,6 +85,7 @@ export default async function TrabajadorPage() {
       solicitudActiva={solicitudActiva ?? null}
       posicionCola={posicionCola}
       tecnicoNombre={tecnicoNombre}
+      adjuntos={adjuntos}
       lugar={profile?.lugar ?? null}
       area={profile?.area ?? null}
       puesto={profile?.puesto ?? null}
