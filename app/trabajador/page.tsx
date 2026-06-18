@@ -12,7 +12,7 @@ export default async function TrabajadorPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso, rol, lugar, area, puesto')
+    .select('primer_ingreso, rol, sede, area, subarea, puesto')
     .eq('id', user.id)
     .single()
 
@@ -30,7 +30,7 @@ export default async function TrabajadorPage() {
 
   const { data: solicitudActiva, error: solicitudError } = await supabase
     .from('solicitudes')
-    .select('id, area_id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
+    .select('id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
     .eq('trabajador_id', user.id)
     .or('estado.eq.en_espera,and(estado.eq.en_proceso,confirmacion_trabajador.eq.false)')
     .limit(1)
@@ -86,8 +86,9 @@ export default async function TrabajadorPage() {
       posicionCola={posicionCola}
       tecnicoNombre={tecnicoNombre}
       adjuntos={adjuntos}
-      lugar={profile?.lugar ?? null}
+      sede={profile?.sede ?? null}
       area={profile?.area ?? null}
+      subarea={profile?.subarea ?? null}
       puesto={profile?.puesto ?? null}
     />
   )

@@ -7,8 +7,9 @@
 export type FilaSolicitud = {
   fecha: string
   trabajador: string
-  lugar: string | null
+  sede: string | null
   area: string | null
+  subarea: string | null
   puesto: string | null
   titulo: string
   tecnico: string | null
@@ -50,12 +51,13 @@ export async function construirPdfReporte(
 
   autoTable(doc, {
     startY: 25 + resumenLineas.length * 6 + 4,
-    head: [['Fecha', 'Trabajador', 'Lugar', 'Área', 'Puesto', 'Título', 'Técnico', 'Resultado']],
+    head: [['Fecha', 'Trabajador', 'Sede', 'Área', 'Subárea', 'Puesto', 'Título', 'Técnico', 'Resultado']],
     body: filas.map((fila) => [
       fila.fecha,
       fila.trabajador,
-      fila.lugar ?? SIN_DATO,
+      fila.sede ?? SIN_DATO,
       fila.area ?? SIN_DATO,
+      fila.subarea ?? SIN_DATO,
       fila.puesto ?? SIN_DATO,
       fila.titulo,
       fila.tecnico ?? SIN_DATO,

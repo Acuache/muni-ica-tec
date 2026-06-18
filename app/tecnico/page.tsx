@@ -18,8 +18,9 @@ export type SolicitudActiva = {
   anydesk_code: string | null
   trabajador: string
   telefono: string | null
-  lugar: string
+  sede: string
   area: string
+  subarea: string
   puesto: string
   adjuntos: AdjuntoVista[]
 }
@@ -30,8 +31,9 @@ export type SolicitudCola = {
   anydesk_code: string | null
   trabajador: string
   telefono: string | null
-  lugar: string
+  sede: string
   area: string
+  subarea: string
   puesto: string
 }
 
@@ -104,15 +106,16 @@ export default async function TecnicoPage() {
   type PerfilTrabajador = {
     username: string
     telefono: string | null
-    lugar: string | null
+    sede: string | null
     area: string | null
+    subarea: string | null
     puesto: string | null
   }
 
   if (estadoTecnico === 'atendiendo') {
     const { data: sol, error: solError } = await supabase
       .from('solicitudes')
-      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
+      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, sede, area, subarea, puesto)')
       .eq('tecnico_id', user.id)
       .eq('estado', 'en_proceso')
       .maybeSingle()
@@ -140,8 +143,9 @@ export default async function TecnicoPage() {
         anydesk_code: sol.anydesk_code ?? null,
         trabajador: perfil?.username ?? '',
         telefono: perfil?.telefono ?? null,
-        lugar: perfil?.lugar ?? '',
+        sede: perfil?.sede ?? '',
         area: perfil?.area ?? '',
+        subarea: perfil?.subarea ?? '',
         puesto: perfil?.puesto ?? '',
         adjuntos: (adjData as AdjuntoVista[]) ?? [],
       }
@@ -149,7 +153,7 @@ export default async function TecnicoPage() {
   } else if (estadoTecnico !== 'descanso') {
     const { data: colaData, error: colaError } = await supabase
       .from('solicitudes')
-      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, lugar, area, puesto)')
+      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, sede, area, subarea, puesto)')
       .eq('estado', 'en_espera')
       .order('created_at', { ascending: true })
 
@@ -165,8 +169,9 @@ export default async function TecnicoPage() {
         anydesk_code: s.anydesk_code ?? null,
         trabajador: perfil?.username ?? '',
         telefono: perfil?.telefono ?? null,
-        lugar: perfil?.lugar ?? '',
+        sede: perfil?.sede ?? '',
         area: perfil?.area ?? '',
+        subarea: perfil?.subarea ?? '',
         puesto: perfil?.puesto ?? '',
       }
     })

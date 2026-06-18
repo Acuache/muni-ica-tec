@@ -25,7 +25,6 @@ import AdjuntosSelector, { type StagedAdjunto } from './adjuntos-selector'
 
 type Solicitud = {
   id: string
-  area_id: string
   tipo_ayuda: string
   titulo: string
   descripcion: string | null
@@ -38,8 +37,9 @@ type Props = {
   posicionCola: number
   tecnicoNombre: string | null
   adjuntos: AdjuntoVista[]
-  lugar: string | null
+  sede: string | null
   area: string | null
+  subarea: string | null
   puesto: string | null
 }
 
@@ -84,8 +84,9 @@ const ContenidoTrabajador = memo(
     posicionCola,
     tecnicoNombre,
     adjuntos,
-    lugar,
+    sede,
     area,
+    subarea,
     puesto,
     onRefresh,
   }: Props & { onRefresh: () => void }) {
@@ -98,21 +99,23 @@ const ContenidoTrabajador = memo(
         onRefresh={onRefresh}
       />
     ) : (
-      <FormularioNuevaSolicitud lugar={lugar} area={area} puesto={puesto} />
+      <FormularioNuevaSolicitud sede={sede} area={area} subarea={subarea} puesto={puesto} />
     )
   },
   (a, b) =>
-    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.adjuntos, a.lugar, a.area, a.puesto]) ===
-    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.adjuntos, b.lugar, b.area, b.puesto]),
+    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.adjuntos, a.sede, a.area, a.subarea, a.puesto]) ===
+    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.adjuntos, b.sede, b.area, b.subarea, b.puesto]),
 )
 
 function FormularioNuevaSolicitud({
-  lugar,
+  sede,
   area,
+  subarea,
   puesto,
 }: {
-  lugar: string | null
+  sede: string | null
   area: string | null
+  subarea: string | null
   puesto: string | null
 }) {
   const router = useRouter()
@@ -229,14 +232,18 @@ function FormularioNuevaSolicitud({
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
           Tus datos
         </p>
-        <div className="grid grid-cols-3 gap-2 text-sm">
+        <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-xs text-gray-500">Lugar</p>
-            <p className="font-medium text-gray-800">{lugar || '—'}</p>
+            <p className="text-xs text-gray-500">Sede</p>
+            <p className="font-medium text-gray-800">{sede || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Área</p>
             <p className="font-medium text-gray-800">{area || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Subárea</p>
+            <p className="font-medium text-gray-800">{subarea || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Puesto</p>

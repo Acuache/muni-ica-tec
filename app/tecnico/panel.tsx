@@ -226,12 +226,16 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
           </p>
         )}
         <p>
-          <span className="text-gray-400">Lugar: </span>
-          <span className="font-medium text-gray-800">{solicitud.lugar || '—'}</span>
+          <span className="text-gray-400">Sede: </span>
+          <span className="font-medium text-gray-800">{solicitud.sede || '—'}</span>
         </p>
         <p>
           <span className="text-gray-400">Área: </span>
           <span className="font-medium text-gray-800">{solicitud.area || '—'}</span>
+        </p>
+        <p>
+          <span className="text-gray-400">Subárea: </span>
+          <span className="font-medium text-gray-800">{solicitud.subarea || '—'}</span>
         </p>
         <p>
           <span className="text-gray-400">Puesto: </span>
@@ -354,8 +358,9 @@ function ItemCola({
           )}
         </div>
         <div className="flex flex-wrap gap-x-3">
-          <span><span className="text-gray-400">Lugar: </span>{solicitud.lugar || '—'}</span>
+          <span><span className="text-gray-400">Sede: </span>{solicitud.sede || '—'}</span>
           <span><span className="text-gray-400">Área: </span>{solicitud.area || '—'}</span>
+          <span><span className="text-gray-400">Subárea: </span>{solicitud.subarea || '—'}</span>
           <span><span className="text-gray-400">Puesto: </span>{solicitud.puesto || '—'}</span>
         </div>
       </div>

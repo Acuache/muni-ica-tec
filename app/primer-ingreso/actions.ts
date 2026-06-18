@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   esEmailValido,
   esTelefonoValido,
+  esUuidValido,
   MAX_PASSWORD,
   MAX_TEXTO_CORTO,
   MIN_PASSWORD,
@@ -18,12 +19,28 @@ const PANEL: Record<string, string> = {
   jefe: '/jefe',
 }
 
+// Los 3 valores fijos de puesto (coinciden con el CHECK de profiles).
+const PUESTOS_VALIDOS = ['Jefe de área', 'Secretaria', 'Trabajador']
+
+// Forma de la jerarquía subárea → área → sede que devuelve el catálogo.
+type SubareaJerarquia = {
+  nombre: string
+  area_id: string
+  areas: {
+    nombre: string
+    sede_id: string
+    sedes: { nombre: string }
+  }
+}
+
 export async function completarPrimerIngreso(
   _prevState: PrimerIngresoState,
   formData: FormData,
 ): Promise<PrimerIngresoState> {
-  const lugar = (formData.get('lugar') as string | null)?.trim() ?? ''
-  const area = (formData.get('area') as string | null)?.trim() ?? ''
+  // El formulario envía ids del catálogo; el nombre se resuelve en el servidor.
+  const sedeId = (formData.get('sede_id') as string | null)?.trim() ?? ''
+  const areaId = (formData.get('area_id') as string | null)?.trim() ?? ''
+  const subareaId = (formData.get('subarea_id') as string | null)?.trim() ?? ''
   const puesto = (formData.get('puesto') as string | null)?.trim() ?? ''
   const nombre = (formData.get('nombre') as string | null)?.trim() ?? ''
   const apellido = (formData.get('apellido') as string | null)?.trim() ?? ''
@@ -32,18 +49,28 @@ export async function completarPrimerIngreso(
   const mantenerPassword = formData.get('mantenerPassword') === 'true'
   const nuevaPassword = (formData.get('nuevaPassword') as string | null)?.trim() ?? ''
 
-  if (!lugar) return { error: 'El campo Lugar no puede estar vacío.' }
-  if (!area) return { error: 'El campo Área no puede estar vacío.' }
-  if (!puesto) return { error: 'El campo Puesto no puede estar vacío.' }
+  if (!sedeId) return { error: 'Selecciona una sede.' }
+  if (!areaId) return { error: 'Selecciona un área.' }
+  if (!subareaId) return { error: 'Selecciona una subárea.' }
+  if (!puesto) return { error: 'Selecciona un puesto.' }
   if (!nombre) return { error: 'El campo Nombre no puede estar vacío.' }
   if (!apellido) return { error: 'El campo Apellido no puede estar vacío.' }
   if (!telefono) return { error: 'El campo Teléfono no puede estar vacío.' }
   if (!email) return { error: 'El campo de correo no puede estar vacío.' }
 
+  // Puesto: uno de los 3 valores fijos (defensa además del CHECK en la base).
+  if (!PUESTOS_VALIDOS.includes(puesto)) {
+    return { error: 'El puesto seleccionado no es válido.' }
+  }
+
+  // Ids manipulados / no-UUID → combinación inválida (sin tocar la base).
+  if (!esUuidValido(sedeId) || !esUuidValido(areaId) || !esUuidValido(subareaId)) {
+    return { error: 'La combinación de sede, área y subárea no es válida.' }
+  }
+
+  // Los nombres de sede/área/subárea vienen del catálogo (canónicos): solo se
+  // valida la longitud de los textos que escribe el usuario.
   const textosCortos: [string, string][] = [
-    ['Lugar', lugar],
-    ['Área', area],
-    ['Puesto', puesto],
     ['Nombre', nombre],
     ['Apellido', apellido],
   ]
@@ -72,6 +99,29 @@ export async function completarPrimerIngreso(
     return { error: 'El correo no coincide con el registrado en tu cuenta. Comunícate con el área de informática.' }
   }
 
+  // Validar la jerarquía contra el catálogo y obtener los nombres canónicos.
+  // Una sola consulta a subareas con joins inner a areas y sedes: si la
+  // subárea existe, se comprueba que su area_id y el sede_id del área
+  // coincidan con lo enviado (no se confía en el cliente).
+  const { data: subData, error: subError } = await supabase
+    .from('subareas')
+    .select('nombre, area_id, areas!inner(nombre, sede_id, sedes!inner(nombre))')
+    .eq('id', subareaId)
+    .maybeSingle()
+
+  if (subError) {
+    return { error: 'No se pudo validar la ubicación seleccionada. Inténtalo de nuevo.' }
+  }
+
+  const sub = subData as unknown as SubareaJerarquia | null
+  if (!sub || sub.area_id !== areaId || sub.areas.sede_id !== sedeId) {
+    return { error: 'La combinación de sede, área y subárea no es válida.' }
+  }
+
+  const sedeNombre = sub.areas.sedes.nombre
+  const areaNombre = sub.areas.nombre
+  const subareaNombre = sub.nombre
+
   if (!mantenerPassword) {
     if (!nuevaPassword) {
       return { error: 'Escribe una nueva contraseña o activa el toggle para mantener la actual.' }
@@ -92,7 +142,16 @@ export async function completarPrimerIngreso(
 
   const { error } = await supabase
     .from('profiles')
-    .update({ lugar, area, puesto, username, telefono, email, primer_ingreso: false })
+    .update({
+      sede: sedeNombre,
+      area: areaNombre,
+      subarea: subareaNombre,
+      puesto,
+      username,
+      telefono,
+      email,
+      primer_ingreso: false,
+    })
     .eq('id', user.id)
 
   if (error) {
@@ -101,6 +160,10 @@ export async function completarPrimerIngreso(
         error:
           'Ya existe un usuario con ese nombre completo. Contacta al área de informática para resolver el conflicto.',
       }
+    }
+    // 23514 = check_violation: defensa si el puesto burlara la validación previa.
+    if (error.code === '23514') {
+      return { error: 'El puesto seleccionado no es válido.' }
     }
     return { error: 'No se pudo guardar la información. Inténtalo de nuevo.' }
   }

@@ -53,7 +53,7 @@ export default async function JefeSolicitudesPage({
   let solicitudesQuery = supabase
     .from('solicitudes')
     .select(
-      'id, created_at, titulo, descripcion, estado, confirmacion_trabajador, confirmacion_tecnico, trabajador:profiles!trabajador_id(username, telefono, email, lugar, area, puesto), tecnico:profiles!tecnico_id(username, email), adjuntos:solicitud_adjuntos(id, tipo, nombre_original, tamano_bytes)',
+      'id, created_at, titulo, descripcion, estado, confirmacion_trabajador, confirmacion_tecnico, trabajador:profiles!trabajador_id(username, telefono, email, sede, area, subarea, puesto), tecnico:profiles!tecnico_id(username, email), adjuntos:solicitud_adjuntos(id, tipo, nombre_original, tamano_bytes)',
     )
     .order('created_at', { ascending: false })
     .range(offset, offset + 9)
@@ -99,8 +99,9 @@ export default async function JefeSolicitudesPage({
     username: string
     telefono: string | null
     email: string | null
-    lugar: string | null
+    sede: string | null
     area: string | null
+    subarea: string | null
     puesto: string | null
   }
   type PerfilTecnico = { username: string; email: string | null }
@@ -119,8 +120,9 @@ export default async function JefeSolicitudesPage({
       trabajador_nombre: trabajador?.username ?? '',
       trabajador_telefono: trabajador?.telefono ?? null,
       trabajador_email: trabajador?.email ?? null,
-      trabajador_lugar: trabajador?.lugar ?? null,
+      trabajador_sede: trabajador?.sede ?? null,
       trabajador_area: trabajador?.area ?? null,
+      trabajador_subarea: trabajador?.subarea ?? null,
       trabajador_puesto: trabajador?.puesto ?? null,
       tecnico_nombre: tecnico?.username ?? null,
       tecnico_email: tecnico?.email ?? null,

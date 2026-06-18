@@ -10,8 +10,9 @@ const MAX_REPORTES = 3
 
 type PerfilTrabajador = {
   username: string
-  lugar: string | null
+  sede: string | null
   area: string | null
+  subarea: string | null
   puesto: string | null
 }
 
@@ -36,7 +37,7 @@ export async function obtenerFilasYResumen(
   const { data, error } = await supabase
     .from('solicitudes')
     .select(
-      'titulo, estado, updated_at, trabajador:profiles!trabajador_id(username, lugar, area, puesto), tecnico:profiles!tecnico_id(username)',
+      'titulo, estado, updated_at, trabajador:profiles!trabajador_id(username, sede, area, subarea, puesto), tecnico:profiles!tecnico_id(username)',
     )
     .in('estado', ESTADOS_CERRADOS)
     .gte('updated_at', inicio)
@@ -50,8 +51,9 @@ export async function obtenerFilasYResumen(
   const filas: FilaSolicitud[] = solicitudes.map((s) => ({
     fecha: formatFechaLima(s.updated_at),
     trabajador: s.trabajador.username,
-    lugar: s.trabajador.lugar,
+    sede: s.trabajador.sede,
     area: s.trabajador.area,
+    subarea: s.trabajador.subarea,
     puesto: s.trabajador.puesto,
     titulo: s.titulo,
     tecnico: s.tecnico?.username ?? null,

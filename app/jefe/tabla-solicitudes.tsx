@@ -17,8 +17,9 @@ export type SolicitudTabla = {
   trabajador_nombre: string
   trabajador_telefono: string | null
   trabajador_email: string | null
-  trabajador_lugar: string | null
+  trabajador_sede: string | null
   trabajador_area: string | null
+  trabajador_subarea: string | null
   trabajador_puesto: string | null
   tecnico_nombre: string | null
   tecnico_email: string | null
@@ -132,7 +133,7 @@ export default function TablaSolicitudes({
                 <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Trabajador</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Teléfono</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Correo</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Lugar / Área / Puesto</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Sede / Área / Subárea / Puesto</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-500">Título</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-500">Descripción</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Técnico</th>
@@ -289,8 +290,9 @@ function FilaTabla({ solicitud: s }: { solicitud: SolicitudTabla }) {
       <td className={tdBase}>{s.trabajador_telefono ?? '—'}</td>
       <td className={tdBase}>{s.trabajador_email ?? '—'}</td>
       <td className={tdBase}>
-        <span className="block">{s.trabajador_lugar ?? '—'}</span>
+        <span className="block">{s.trabajador_sede ?? '—'}</span>
         <span className="block text-gray-400">{s.trabajador_area ?? '—'}</span>
+        <span className="block text-gray-400">{s.trabajador_subarea ?? '—'}</span>
         <span className="block text-gray-400">{s.trabajador_puesto ?? '—'}</span>
       </td>
       <td className={tdBase}>{s.titulo}</td>
