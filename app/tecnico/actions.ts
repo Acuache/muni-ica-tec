@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { autorizar } from '@/lib/autorizacion'
 import { esUuidValido } from '@/lib/validacion'
 
@@ -43,7 +42,8 @@ export async function cambiarEstado(
       .from('technician_status')
       .insert({ tecnico_id: user.id, estado })
     if (insertError) return { error: 'No se pudo actualizar el estado.' }
-    redirect('/tecnico')
+    // Éxito: el cliente refresca la vista (sin redirect, evita recargas duras).
+    return
   }
 
   // "Atendiendo" solo bloquea si de verdad hay una solicitud en proceso a su
@@ -87,7 +87,8 @@ export async function cambiarEstado(
     return { error: 'Tu estado cambió mientras tanto. Actualiza la página.' }
   }
 
-  redirect('/tecnico')
+  // Éxito: el cliente refresca la vista (sin redirect, evita recargas duras).
+  return
 }
 
 export async function atenderAhora(
@@ -114,7 +115,8 @@ export async function atenderAhora(
     return { error: 'Este turno ya fue tomado por otro técnico.' }
   }
 
-  redirect('/tecnico')
+  // Éxito: el cliente refresca la cola/atención (sin redirect, evita recargas duras).
+  return
 }
 
 export async function confirmarResolucionTecnico(
@@ -170,7 +172,8 @@ export async function confirmarResolucionTecnico(
 
   if (statusError) return { error: 'No se pudo actualizar tu estado.' }
 
-  redirect('/tecnico')
+  // Éxito: el cliente refresca la cola (sin redirect, evita recargas duras).
+  return
 }
 
 export async function liberarSolicitud(
@@ -210,7 +213,8 @@ export async function liberarSolicitud(
 
   if (statusError) return { error: 'No se pudo actualizar tu estado.' }
 
-  redirect('/tecnico')
+  // Éxito: el cliente refresca la cola (sin redirect, evita recargas duras).
+  return
 }
 
 // Si el técnico quedó "atendiendo" una solicitud que ya no es suya (cambió
