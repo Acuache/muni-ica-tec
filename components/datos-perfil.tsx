@@ -8,7 +8,6 @@ const ROL_LABELS: Record<Rol, string> = {
 
 type Props = {
   username: string
-  dni: string | null
   telefono: string | null
   email: string | null
   rol: Rol
@@ -23,12 +22,11 @@ function Campo({ label, valor }: { label: string; valor: string | null }) {
   )
 }
 
-export default function DatosPerfil({ username, dni, telefono, email, rol }: Props) {
+export default function DatosPerfil({ username, telefono, email, rol }: Props) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <dl className="space-y-4">
         <Campo label="Usuario" valor={username} />
-        <Campo label="DNI" valor={dni} />
         <Campo label="Teléfono" valor={telefono} />
         <Campo label="Correo" valor={email} />
         <Campo label="Rol" valor={ROL_LABELS[rol]} />

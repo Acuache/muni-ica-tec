@@ -3,6 +3,11 @@
 import { useActionState, useState } from 'react'
 import { IconEye, IconEyeOff } from '@tabler/icons-react'
 import { completarPrimerIngreso } from './actions'
+import SelectsUbicacion, {
+  type Sede,
+  type Area,
+  type Subarea,
+} from '@/components/selects-ubicacion'
 
 const inputCls =
   'mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400'
@@ -12,10 +17,6 @@ const labelCls = 'block text-sm font-medium text-zinc-700'
 // Los 3 valores fijos de puesto. Coinciden con el CHECK de profiles y con la
 // validación del Server Action (SPEC 13).
 const PUESTOS = ['Jefe de área', 'Secretaria', 'Trabajador']
-
-type Sede = { id: string; nombre: string }
-type Area = { id: string; sede_id: string; nombre: string }
-type Subarea = { id: string; area_id: string; nombre: string }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -43,26 +44,6 @@ export default function FormularioPrimerIngreso({
   const [mantenerPassword, setMantenerPassword] = useState(true)
   const [mostrarPassword, setMostrarPassword] = useState(false)
 
-  // Cascade: se trabaja con id; el Server Action resuelve los nombres.
-  const [sedeId, setSedeId] = useState('')
-  const [areaId, setAreaId] = useState('')
-  const [subareaId, setSubareaId] = useState('')
-
-  // El catálogo llega pre-ordenado por `orden`; filtrar preserva ese orden.
-  const areasDeSede = sedeId ? areas.filter((a) => a.sede_id === sedeId) : []
-  const subareasDeArea = areaId ? subareas.filter((sa) => sa.area_id === areaId) : []
-
-  function handleSedeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSedeId(e.target.value)
-    setAreaId('')
-    setSubareaId('')
-  }
-
-  function handleAreaChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setAreaId(e.target.value)
-    setSubareaId('')
-  }
-
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-zinc-50 px-4 py-12">
       <div className="w-full max-w-lg">
@@ -76,74 +57,12 @@ export default function FormularioPrimerIngreso({
         <form action={action} className="space-y-6">
           {/* Sección 1 — Datos del lugar (cascade Sede → Área → Subárea + Puesto) */}
           <Section title="Datos del lugar">
-            <div>
-              <label htmlFor="sede_id" className={labelCls}>
-                Sede
-              </label>
-              <select
-                id="sede_id"
-                name="sede_id"
-                required
-                value={sedeId}
-                onChange={handleSedeChange}
-                className={inputCls}
-              >
-                <option value="">Selecciona una sede…</option>
-                {sedes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="area_id" className={labelCls}>
-                Área
-              </label>
-              <select
-                id="area_id"
-                name="area_id"
-                required
-                value={areaId}
-                onChange={handleAreaChange}
-                disabled={!sedeId}
-                className={inputCls}
-              >
-                <option value="">
-                  {sedeId ? 'Selecciona un área…' : 'Primero elige una sede'}
-                </option>
-                {areasDeSede.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="subarea_id" className={labelCls}>
-                Subárea
-              </label>
-              <select
-                id="subarea_id"
-                name="subarea_id"
-                required
-                value={subareaId}
-                onChange={(e) => setSubareaId(e.target.value)}
-                disabled={!areaId}
-                className={inputCls}
-              >
-                <option value="">
-                  {areaId ? 'Selecciona una subárea…' : 'Primero elige un área'}
-                </option>
-                {subareasDeArea.map((sa) => (
-                  <option key={sa.id} value={sa.id}>
-                    {sa.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectsUbicacion
+              sedes={sedes}
+              areas={areas}
+              subareas={subareas}
+              required
+            />
 
             <div>
               <label htmlFor="puesto" className={labelCls}>

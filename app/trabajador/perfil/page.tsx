@@ -11,7 +11,7 @@ export default async function TrabajadorPerfilPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso, username, dni, telefono, email, rol')
+    .select('primer_ingreso, username, telefono, email, rol')
     .eq('id', user.id)
     .single()
 
@@ -30,7 +30,6 @@ export default async function TrabajadorPerfilPage() {
       <h1 className="mb-4 text-xl font-bold text-gray-900">Mi perfil</h1>
       <DatosPerfil
         username={profile?.username ?? ''}
-        dni={profile?.dni ?? null}
         telefono={profile?.telefono ?? null}
         email={profile?.email ?? null}
         rol={profile?.rol ?? 'trabajador'}

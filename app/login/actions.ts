@@ -50,9 +50,19 @@ export async function login(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('primer_ingreso')
+    .select('primer_ingreso, activo')
     .eq('id', data.user.id)
     .single()
+
+  // Cuenta desactivada (SPEC 14): cerrar sesión y bloquear el acceso. Defensa
+  // en capas junto al ban de auth; el ban ya rechaza en signInWithPassword,
+  // este chequeo cubre el caso de que ban y `activo` queden desincronizados.
+  if (profile && profile.activo === false) {
+    await supabase.auth.signOut()
+    return {
+      error: 'Tu cuenta está desactivada. Comunícate con el área de informática.',
+    }
+  }
 
   // Si no se puede leer el perfil, no se puede saber si debe pasar por el
   // primer ingreso: se le manda a /primer-ingreso, que redirige al panel

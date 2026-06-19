@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { IconBell } from '@tabler/icons-react'
+import { DropdownMenu } from 'radix-ui'
+import { IconBell, IconChevronDown } from '@tabler/icons-react'
 import LogoSoporte from '@/components/logo-soporte'
 import MenuUsuario from '@/components/menu-usuario'
 
@@ -19,6 +20,7 @@ const NAV_LINKS = [
 
 export default function JefeShell({ username, children }: Props) {
   const pathname = usePathname()
+  const usuariosActivo = pathname.startsWith('/jefe/usuarios')
 
   return (
     <div className="flex min-h-full flex-col bg-gray-50">
@@ -62,6 +64,48 @@ export default function JefeShell({ username, children }: Props) {
               </Link>
             )
           })}
+
+          {/* Menú desplegable "Usuario" (SPEC 14): Crear / Buscar */}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className={[
+                  'flex items-center gap-1 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                  usuariosActivo
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700',
+                ].join(' ')}
+              >
+                <span>Usuario</span>
+                <IconChevronDown size={16} />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="start"
+                sideOffset={4}
+                className="min-w-40 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+              >
+                <DropdownMenu.Item asChild>
+                  <Link
+                    href="/jefe/usuarios/crear"
+                    className="block cursor-pointer rounded-md px-3 py-2 text-sm text-gray-700 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                  >
+                    Crear
+                  </Link>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item asChild>
+                  <Link
+                    href="/jefe/usuarios/buscar"
+                    className="block cursor-pointer rounded-md px-3 py-2 text-sm text-gray-700 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                  >
+                    Buscar
+                  </Link>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
       </nav>
 
