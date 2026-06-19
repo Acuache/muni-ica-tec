@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Soporte Municipal — Municipalidad Provincial de Ica</title>
+<style>
+  :root{
+    --brand:#0e6c9c; --brand-dark:#0a4f73; --brand-soft:#e6f1f8;
+    --accent:#e0a106; --ok:#15803d; --okbg:#dcfce7; --warn:#b45309; --warnbg:#fef3c7;
+    --bad:#b91c1c; --badbg:#fee2e2;
+    --ink:#0f172a; --muted:#51607a; --line:#e2e8f0; --bg:#eef2f6; --card:#ffffff;
+    --radius:16px; --shadow:0 10px 30px rgba(15,23,42,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Deck / slides ---------- */
+  .deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    padding:46px 64px 78px;overflow:auto;
+  }
+  .slide.active{display:flex;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .kicker{
+    display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
+    font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--brand);background:var(--brand-soft);
+    padding:6px 14px;border-radius:999px;margin-bottom:14px;
+  }
+  .slide h2{font-size:38px;line-height:1.1;letter-spacing:-.01em;margin-bottom:6px}
+  .slide h2 .em{color:var(--brand)}
+  .lead{font-size:18px;color:var(--muted);max-width:60ch;margin-bottom:22px}
+
+  /* Two-column manual layout */
+  .split{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;flex:1;min-height:0}
+  .split.rev{grid-template-columns:1fr 1.05fr}
+  .shot{display:flex;flex-direction:column;gap:12px}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden}
+  figure img{display:block;width:100%;height:auto}
+  figure.pair{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  figure.pair img{border-right:1px solid var(--line)}
+  figcaption{font-size:13px;color:var(--muted);text-align:center;padding:8px}
+  .twoshots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  /* Steps */
+  ol.steps{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+  ol.steps li{position:relative;padding-left:46px;font-size:16.5px;line-height:1.45;color:#1f2937}
+  ol.steps li::before{
+    counter-increment:s;content:counter(s);
+    position:absolute;left:0;top:-2px;width:30px;height:30px;border-radius:50%;
+    background:var(--brand);color:#fff;font-weight:700;font-size:15px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  ol.steps li b{color:var(--ink)}
+  .tag{display:inline-block;font-size:13px;font-weight:600;padding:2px 8px;border-radius:6px;
+    background:var(--brand-soft);color:var(--brand-dark);border:1px solid #cfe3f0}
+
+  ul.bullets{list-style:none;display:flex;flex-direction:column;gap:13px}
+  ul.bullets li{position:relative;padding-left:30px;font-size:16.5px;line-height:1.45;color:#1f2937}
+  ul.bullets li::before{content:"";position:absolute;left:4px;top:9px;width:11px;height:11px;
+    border-radius:3px;background:var(--brand);transform:rotate(45deg)}
+  ul.bullets li b{color:var(--ink)}
+
+  /* Generic content grid (cards) */
+  .grid{display:grid;gap:18px;flex:1;align-content:start}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;
+    box-shadow:0 4px 14px rgba(15,23,42,.05)}
+  .card h3{font-size:19px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+  .card .ic{width:34px;height:34px;border-radius:9px;background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+  .card p,.card li{color:var(--muted);font-size:15px;line-height:1.5}
+  .card ul{margin-left:18px}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;
+    box-shadow:0 4px 14px rgba(15,23,42,.05);font-size:15.5px}
+  th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--brand);color:#fff;font-weight:600;font-size:14px;letter-spacing:.02em}
+  tbody tr:last-child td{border-bottom:none}
+  .col-antes{color:#7c2d12}
+  .col-desp{color:#14532d;font-weight:600}
+  td.antes{background:#fff7ed}
+  td.desp{background:#f0fdf4}
+  .money{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+  .total td{background:var(--brand-soft);font-weight:700;color:var(--brand-dark)}
+  caption,.note{caption-side:bottom}
+  .note{font-size:13px;color:var(--muted);margin-top:12px}
+
+  /* Flow diagram */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:8px}
+  .flow .step{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px;text-align:center;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+  .flow .step .who{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--brand)}
+  .flow .step .act{font-size:15px;margin-top:6px;color:#1f2937}
+  .flow .arrow{display:flex;align-items:center;color:#94a3b8;font-size:26px;padding:0 8px}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;
+    padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#bbf7d0}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#fecaca}
+  .roles{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+
+  /* Cover */
+  .cover{justify-content:center;align-items:flex-start;
+    background:#0a4f73;
+    background-image:radial-gradient(1200px 600px at 80% -10%,#13456a 0,var(--brand-dark) 45%,#072f47 100%);
+    color:#fff;padding-left:84px}
+  .cover .kicker{background:rgba(255,255,255,.14);color:#dbeafe}
+  .cover img.logo{width:96px;height:96px;border-radius:18px;background:#fff;padding:10px;margin-bottom:26px;
+    box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  .cover h1{font-size:62px;line-height:1.02;letter-spacing:-.02em;max-width:18ch}
+  .cover .sub{font-size:21px;color:#cfe3f3;margin-top:18px;max-width:52ch}
+  .cover .meta{margin-top:34px;display:flex;gap:10px;flex-wrap:wrap}
+  .cover .meta .pill{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#eaf4fb}
+  .cover .foot{position:absolute;bottom:34px;left:84px;color:#9fc3da;font-size:15px}
+
+  /* Closing */
+  .closing{background-color:#0a4f73;background-image:linear-gradient(160deg,#0a4f73,#072f47);color:#fff;justify-content:center}
+  .closing h2{font-size:46px;color:#fff}
+  .closing .lead{color:#cfe3f3}
+  .closing .grid .card{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16)}
+  .closing .card h3,.closing .card p,.closing .card li{color:#eaf4fb}
+  .closing .card .ic{background:rgba(255,255,255,.16);color:#fff}
+
+  /* Nav */
+  .nav{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 22px;background:rgba(255,255,255,.85);
+    backdrop-filter:blur(8px);border-top:1px solid var(--line);z-index:50}
+  .nav .progress{height:4px;background:var(--line);border-radius:4px;flex:1;margin:0 18px;overflow:hidden}
+  .nav .progress > i{display:block;height:100%;background:var(--brand);width:0;transition:width .3s}
+  .nav button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:9px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px}
+  .nav button:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .nav .count{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;min-width:64px;text-align:center}
+  .secflag{position:fixed;top:16px;right:22px;z-index:40;font-size:12.5px;font-weight:700;color:var(--brand-dark);
+    background:#fff;border:1px solid var(--line);padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .hint{position:fixed;top:16px;left:22px;z-index:40;font-size:12px;color:var(--muted)}
+
+  /* Overview */
+  .overview{position:fixed;inset:0;background:rgba(8,30,44,.96);z-index:100;display:none;
+    padding:46px;overflow:auto}
+  .overview.show{display:block}
+  .overview h3{color:#fff;font-size:18px;margin-bottom:18px}
+  .ovgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .ovgrid button{font:inherit;text-align:left;cursor:pointer;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.16);color:#eaf4fb;border-radius:10px;padding:12px 14px}
+  .ovgrid button:hover{background:var(--brand);border-color:var(--brand)}
+  .ovgrid button .n{font-size:12px;color:#9fc3da}
+  .ovgrid button .t{font-size:14px;font-weight:600;margin-top:3px;display:block}
+
+  @media (max-width:1100px){
+    .slide{padding:32px 28px 76px}
+    .split,.split.rev{grid-template-columns:1fr;gap:22px}
+    .g3{grid-template-columns:1fr 1fr}
+    .cover h1{font-size:46px}
+  }
+
+  /* Print → PDF, one slide per page */
+  @media print{
+    html,body{height:auto;overflow:visible;background:#fff}
+    .deck{position:static}
+    .nav,.secflag,.hint,.overview{display:none!important}
+    .slide{position:relative;inset:auto;display:flex!important;min-height:100vh;
+      page-break-after:always;break-after:page;animation:none}
+    .slide:last-child{page-break-after:auto;break-after:auto}
+    .split,.split.rev{align-items:center}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1 · PORTADA -->
+  <section class="slide cover" data-sec="Portada">
+    <img class="logo" src="capturas/00-logo.png" alt="Municipalidad Provincial de Ica" />
+    <span class="kicker">Municipalidad Provincial de Ica · Área de Informática</span>
+    <h1>Soporte<br/>Municipal</h1>
+    <p class="sub">Sistema web para gestionar los pedidos de soporte técnico de toda la municipalidad: un solo flujo para el trabajador, el técnico y el jefe de informática.</p>
+    <div class="meta">
+      <span class="pill">Manual de uso</span>
+      <span class="pill">Tecnología y seguridad</span>
+      <span class="pill">Costo–beneficio</span>
+    </div>
+    <div class="foot">Presentación del proyecto · 2026</div>
+  </section>
+
+  <!-- 2 · PROBLEMA (ANTES) -->
+  <section class="slide" data-sec="El problema">
+    <span class="kicker">El punto de partida · Antes</span>
+    <h2>¿Cómo se pedía soporte <span class="em">hasta ahora</span>?</h2>
+    <p class="lead">El técnico atendía como podía: lo llamaban a cada rato, sin ningún orden, y muchas veces los propios trabajadores tenían que dejar su puesto e ir caminando hasta el área de informática.</p>
+    <div class="grid g3">
+      <div class="card"><h3><span class="ic">📞</span>Interrupciones constantes</h3><p>Llamadas, mensajes y visitas al mismo tiempo. El técnico salta de un pedido a otro y pierde el hilo.</p></div>
+      <div class="card"><h3><span class="ic">🧠</span>"Se me olvidó"</h3><p>Los pedidos quedaban en la memoria o en papelitos. Sin registro, algunos casos simplemente se perdían.</p></div>
+      <div class="card"><h3><span class="ic">🚶</span>Traslados innecesarios</h3><p>El trabajador deja su oficina para reportar el problema en persona; el técnico también se desplaza sin saber qué encontrará.</p></div>
+      <div class="card"><h3><span class="ic">🤷</span>Sin orden ni prioridad</h3><p>Atendía "el que insistía más". No había una cola justa por orden de llegada.</p></div>
+      <div class="card"><h3><span class="ic">📷</span>Sin evidencia</h3><p>Nada de fotos del error ni del documento. El técnico llegaba a ciegas.</p></div>
+      <div class="card"><h3><span class="ic">📊</span>Sin indicadores</h3><p>Imposible saber cuántos casos hubo, cuántos se resolvieron ni el rendimiento real del área.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 · SOLUCIÓN (DESPUÉS) -->
+  <section class="slide" data-sec="La solución">
+    <span class="kicker">La propuesta · Después</span>
+    <h2>Una sola plataforma, <span class="em">un solo flujo</span></h2>
+    <p class="lead">Todos los pedidos viven en una misma base de "solicitudes" compartida por tres roles. Cada quien ve lo que le toca y el caso avanza ordenadamente de principio a fin.</p>
+    <div class="flow">
+      <div class="step"><div class="who">Trabajador</div><div class="act">Crea su solicitud desde su sitio</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="who">Sistema</div><div class="act">Forma una cola por orden de llegada</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="who">Técnico</div><div class="act">"Atender ahora" y resuelve</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="who">Ambos</div><div class="act">Doble confirmación: Resuelto</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="who">Jefe</div><div class="act">Supervisa, mide y reporta</div></div>
+    </div>
+    <div class="roles">
+      <span class="pill"><b>👤 Trabajador</b> — pide ayuda y confirma</span>
+      <span class="pill"><b>🛠️ Técnico</b> — atiende la cola</span>
+      <span class="pill"><b>📈 Jefe</b> — controla todo</span>
+    </div>
+  </section>
+
+  <!-- 4 · TRABAJADOR · LOGIN -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (1 / 6)</span>
+    <h2>Iniciar sesión</h2>
+    <div class="split">
+      <ol class="steps">
+        <li>Abre la dirección del sistema en el navegador.</li>
+        <li>Escribe tu <b>Usuario / Correo</b> y tu <b>Contraseña</b>, entregados por el área de informática.</li>
+        <li>Pulsa <span class="tag">Ingresar</span>.</li>
+        <li>¿Olvidaste tu contraseña? Usa el enlace <b>"¿Olvidaste tu contraseña?"</b> para recuperarla con tu correo.</li>
+      </ol>
+      <div class="shot"><figure><img src="capturas/01-login.png" alt="Pantalla de inicio de sesión" /></figure></div>
+    </div>
+  </section>
+
+  <!-- 5 · TRABAJADOR · PRIMER INGRESO -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (2 / 6)</span>
+    <h2>Primer ingreso <span class="em">(solo la primera vez)</span></h2>
+    <div class="split rev">
+      <div class="shot"><figure><img src="capturas/02-primer-ingreso.png" alt="Formulario de primer ingreso" /></figure></div>
+      <ol class="steps">
+        <li><b>Datos del lugar:</b> elige tu <b>Sede → Área → Subárea → Puesto</b> (se eligen en cascada).</li>
+        <li><b>Datos del usuario:</b> escribe tu <b>Nombre</b> y <b>Apellido</b>.</li>
+        <li><b>Datos de la cuenta:</b> registra tu <b>Teléfono</b> y tu <b>Correo</b> (debe coincidir con el entregado). Sirven para recuperar tu contraseña.</li>
+        <li>Si quieres, define una <b>nueva contraseña</b>; si no, mantienes la actual.</li>
+        <li>Pulsa <span class="tag">Confirmar y continuar</span>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 6 · TRABAJADOR · CREAR SOLICITUD -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (3 / 6)</span>
+    <h2>Crear una solicitud de ayuda</h2>
+    <div class="split">
+      <ol class="steps">
+        <li>En <b>"Tus datos"</b> verás tu ubicación, cargada automáticamente.</li>
+        <li>Elige el <b>Tipo de ayuda</b>: <b>Presencial</b> o <b>Virtual</b>.</li>
+        <li>Si es <b>Virtual</b>, escribe tu <b>Código AnyDesk</b> para que el técnico te asista de forma remota.</li>
+        <li>Pon un <b>Título</b> y, si deseas, una <b>Descripción</b> del problema.</li>
+        <li>Adjunta <b>imágenes</b> (se comprimen, máx. 1 MB) o <b>PDF</b> (máx. 3 MB): por ejemplo, una foto del error.</li>
+        <li>Pulsa <span class="tag">Enviar Solicitud</span>.</li>
+      </ol>
+      <div class="shot"><figure><img src="capturas/04-nueva-solicitud-virtual.png" alt="Formulario de nueva solicitud (virtual con AnyDesk y adjunto)" /><figcaption>Solicitud virtual: campo de AnyDesk y archivo adjunto comprimido.</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- 7 · TRABAJADOR · SEGUIMIENTO / COLA -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (4 / 6)</span>
+    <h2>Sigue tu solicitud en la cola</h2>
+    <div class="split rev">
+      <div class="shot"><figure><img src="capturas/05-seguimiento-en-espera.png" alt="Seguimiento de la solicitud en espera" /></figure></div>
+      <ol class="steps">
+        <li>El estado de tu solicitud aparece como <span class="tag">En espera</span>.</li>
+        <li>El sistema te dice <b>cuántas personas hay antes que tú</b> en la cola.</li>
+        <li>Mientras esté en espera, puedes <b>"Cancelar ayuda"</b> si ya no la necesitas.</li>
+        <li>Tus <b>archivos adjuntos</b> quedan visibles para el técnico.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 8 · TRABAJADOR · RESOLUCIÓN -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (5 / 6)</span>
+    <h2>Confirma si se resolvió</h2>
+    <div class="split">
+      <ol class="steps">
+        <li>Cuando un técnico toma tu caso, el estado pasa a <span class="tag">En proceso</span> y ves <b>quién te está atendiendo</b>.</li>
+        <li>Al terminar, el sistema te pregunta <b>"¿Se ha resuelto el problema?"</b>.</li>
+        <li>Responde <b>Resuelto</b> o <b>No resuelto</b>.</li>
+        <li>El caso se cierra como <b>Solucionado</b> solo cuando <b>tú y el técnico</b> confirman: es la <b>doble confirmación</b>.</li>
+      </ol>
+      <div class="shot"><figure><img src="capturas/06-seguimiento-resolucion.png" alt="Tarjeta de confirmación de resolución" /></figure></div>
+    </div>
+  </section>
+
+  <!-- 9 · TRABAJADOR · PERFIL Y SESIÓN -->
+  <section class="slide" data-sec="Manual · Trabajador">
+    <span class="kicker">Manual · Trabajador (6 / 6)</span>
+    <h2>Tu perfil y cerrar sesión</h2>
+    <div class="split rev">
+      <div class="shot twoshots">
+        <figure><img src="capturas/07-trabajador-perfil.png" alt="Perfil del trabajador" /><figcaption>Mi perfil</figcaption></figure>
+        <figure><img src="capturas/08-cerrar-sesion.png" alt="Diálogo de cierre de sesión" /><figcaption>Cerrar sesión seguro</figcaption></figure>
+      </div>
+      <ol class="steps">
+        <li>Desde el menú con <b>tu nombre</b> (arriba a la derecha) entra a <b>"Perfil"</b> para ver tus datos.</li>
+        <li>Usa <b>"Salir sesión"</b> y confirma para cerrar de forma segura cuando termines.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 10 · TÉCNICO · COLA Y ESTADO -->
+  <section class="slide" data-sec="Manual · Técnico">
+    <span class="kicker">El técnico · ¿Qué hace?</span>
+    <h2>Cola de espera y disponibilidad</h2>
+    <div class="split">
+      <ol class="steps">
+        <li>Ve sus <b>métricas del día</b>: <b>Esperando</b> y <b>Finalizadas hoy</b>.</li>
+        <li>Cambia su <b>estado</b>: <b>Disponible · En Oficina · Virtual · Descanso</b>.</li>
+        <li>La <b>"Cola de Espera"</b> lista los pedidos por orden de llegada, con los datos del trabajador.</li>
+        <li>Con <span class="tag">Atender ahora</span> toma un caso. Es atómico: si otro técnico lo tomó primero, el sistema avisa.</li>
+      </ol>
+      <div class="shot"><figure><img src="capturas/09-tecnico-cola.png" alt="Panel del técnico con la cola de espera" /></figure></div>
+    </div>
+  </section>
+
+  <!-- 11 · TÉCNICO · ATENDER -->
+  <section class="slide" data-sec="Manual · Técnico">
+    <span class="kicker">El técnico · ¿Qué hace?</span>
+    <h2>Atender y cerrar un caso</h2>
+    <div class="split rev">
+      <div class="shot"><figure><img src="capturas/10-tecnico-atendiendo.png" alt="Técnico atendiendo una solicitud" /></figure></div>
+      <ol class="steps">
+        <li>En <b>"Atendiendo ahora"</b> ve todos los datos del trabajador, su <b>Código AnyDesk</b> y sus <b>archivos</b>.</li>
+        <li>Resuelve el problema, presencial o de forma remota.</li>
+        <li>Pulsa <b>Resuelto</b>, o <b>Liberar</b> para devolver el caso a la cola.</li>
+        <li>El caso se cierra cuando <b>técnico y trabajador</b> confirman (doble confirmación). Al terminar, vuelve a <b>Disponible</b>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 12 · JEFE · PANEL -->
+  <section class="slide" data-sec="Manual · Jefe">
+    <span class="kicker">El jefe de informática · Su poder</span>
+    <h2>Tablero de control <span class="em">en vivo</span></h2>
+    <div class="split">
+      <ul class="bullets">
+        <li><b>KPIs del día:</b> Esperando ayuda, Solucionados hoy (con <b>% de tasa de éxito</b>) y No solucionados (escalamiento).</li>
+        <li><b>Estado de Técnicos en vivo:</b> qué hace cada técnico (Disponible, Atendiendo, En Oficina, Virtual, Descanso).</li>
+        <li>Ve <b>a quién está ayudando</b> cada técnico y desde hace cuánto (<b>"última actualización hace X"</b>).</li>
+        <li>Todo se refresca solo, sin recargar la página.</li>
+      </ul>
+      <div class="shot"><figure><img src="capturas/11-jefe-panel.png" alt="Panel del jefe con KPIs y estado de técnicos" /></figure></div>
+    </div>
+  </section>
+
+  <!-- 13 · JEFE · SOLICITUDES -->
+  <section class="slide" data-sec="Manual · Jefe">
+    <span class="kicker">El jefe de informática · Su poder</span>
+    <h2>Control total de las solicitudes</h2>
+    <div class="split rev">
+      <div class="shot"><figure><img src="capturas/12-jefe-solicitudes.png" alt="Tabla de solicitudes del jefe" /></figure></div>
+      <ul class="bullets">
+        <li>Ve <b>todas</b> las solicitudes y las <b>filtra por estado</b> (en espera, en proceso, solucionado, etc.).</li>
+        <li>Revisa las <b>confirmaciones</b> del trabajador y del técnico de cada caso.</li>
+        <li>Puede <b>Marcar Solucionado</b> o <b>Cancelar</b> una solicitud cuando corresponde.</li>
+        <li>Acción <b>masiva</b> para cerrar varios casos a la vez.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 14 · JEFE · REPORTES -->
+  <section class="slide" data-sec="Manual · Jefe">
+    <span class="kicker">El jefe de informática · Su poder</span>
+    <h2>Reportes mensuales en PDF</h2>
+    <div class="split">
+      <ul class="bullets">
+        <li>Descarga el <b>reporte del mes en curso</b> (del día 1 hasta hoy).</li>
+        <li>Genera y descarga los <b>meses anteriores</b> en PDF.</li>
+        <li>Cada reporte trae el <b>resumen</b> y el <b>listado</b> de solicitudes solucionadas y no solucionadas.</li>
+        <li>Ideal para <b>informes de gestión y auditoría</b> del área.</li>
+      </ul>
+      <div class="shot"><figure><img src="capturas/13-jefe-reportes.png" alt="Página de reportes mensuales" /></figure></div>
+    </div>
+  </section>
+
+  <!-- 15 · JEFE · CREAR USUARIOS -->
+  <section class="slide" data-sec="Manual · Jefe">
+    <span class="kicker">El jefe de informática · Su poder</span>
+    <h2>Crea las cuentas del personal</h2>
+    <div class="split rev">
+      <div class="shot"><figure><img src="capturas/14-jefe-crear-usuario.png" alt="Formulario de creación de usuario" /></figure></div>
+      <ul class="bullets">
+        <li>Crea cuentas <b>una por una</b> o de forma <b>masiva</b> (lista de correos).</li>
+        <li>Asigna el <b>rol</b>: Trabajador, Técnico o Jefe de informática.</li>
+        <li>La <b>contraseña</b> se asigna según el rol; el usuario la cambia en su primer ingreso.</li>
+        <li>Puede dejar listo el <b>primer ingreso</b> para que el usuario entre directo.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 16 · JEFE · GESTIÓN DE USUARIOS -->
+  <section class="slide" data-sec="Manual · Jefe">
+    <span class="kicker">El jefe de informática · Su poder</span>
+    <h2>Edita, restablece y da de baja</h2>
+    <div class="split">
+      <ul class="bullets">
+        <li><b>Busca</b> por nombre o <b>filtra por sede</b>; muestra activos y desactivados.</li>
+        <li><b>Edita</b> nombre, teléfono, ubicación y <b>cambia el rol</b> de cualquier usuario.</li>
+        <li><b>Restablece la contraseña</b> a la del rol con un clic.</li>
+        <li><b>Desactiva o reactiva</b> cuentas. El sistema <b>protege al último jefe activo</b>.</li>
+      </ul>
+      <div class="shot"><figure><img src="capturas/15-jefe-usuarios.png" alt="Lista de gestión de usuarios" /><figcaption>Buscar y filtrar · editar · cambiar rol · restablecer contraseña · activar/desactivar.</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- 17 · TECNOLOGÍAS -->
+  <section class="slide" data-sec="Tecnologías">
+    <span class="kicker">Cómo está construido</span>
+    <h2>Tecnologías utilizadas</h2>
+    <p class="lead">Tecnología moderna, estándar de la industria y de bajo costo de operación. Un solo backend administrado, sin servidores propios que mantener.</p>
+    <div class="grid g3">
+      <div class="card"><h3><span class="ic">⚛️</span>Frontend</h3><ul>
+        <li>Next.js 16.2.7 (App Router)</li><li>React 19.2.4</li><li>TypeScript 5</li></ul></div>
+      <div class="card"><h3><span class="ic">🎨</span>Interfaz</h3><ul>
+        <li>Tailwind CSS v4</li><li>shadcn/ui + Radix</li><li>Íconos Tabler</li></ul></div>
+      <div class="card"><h3><span class="ic">🗄️</span>Backend — Supabase</h3><ul>
+        <li>Base de datos PostgreSQL</li><li>Autenticación y seguridad (RLS)</li><li>Almacenamiento de archivos</li></ul></div>
+      <div class="card"><h3><span class="ic">📄</span>Reportes</h3><ul>
+        <li>PDF con jsPDF</li><li>Tablas con jspdf-autotable</li><li>Generación mensual automática</li></ul></div>
+      <div class="card"><h3><span class="ic">🔄</span>Actualización en vivo</h3><ul>
+        <li>Refresco por <i>polling</i></li><li>Se pausa si la pestaña está oculta</li><li>Simple y económico (decisión de MVP)</li></ul></div>
+      <div class="card"><h3><span class="ic">✅</span>Calidad</h3><ul>
+        <li>ESLint 9</li><li>Pruebas E2E con Playwright</li><li>Migraciones de base versionadas</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 18 · SEGURIDAD -->
+  <section class="slide" data-sec="Seguridad">
+    <span class="kicker">Protección de la información</span>
+    <h2>Políticas de seguridad</h2>
+    <p class="lead">La seguridad no depende de una sola barrera: el acceso se valida en varias capas y la base de datos siempre tiene la última palabra.</p>
+    <div class="grid g2">
+      <div class="card"><h3><span class="ic">🛡️</span>Acceso por rol, en capas</h3><p>Primero el enrutamiento por rol; luego, cada acción del servidor <b>verifica el rol en la base de datos</b> (no en el navegador). El navegador nunca decide los permisos.</p></div>
+      <div class="card"><h3><span class="ic">🔒</span>RLS en PostgreSQL</h3><p>La <b>seguridad a nivel de fila</b> es la capa definitiva: cada usuario solo ve y escribe lo que su rol permite. El trabajador ve sus solicitudes; el técnico y el jefe, las que les corresponden.</p></div>
+      <div class="card"><h3><span class="ic">🔑</span>Llaves separadas</h3><p>Tres accesos distintos a los datos. La llave con más privilegios (<i>service_role</i>) vive <b>solo en el servidor</b> y jamás llega al navegador.</p></div>
+      <div class="card"><h3><span class="ic">🧾</span>Validación y unicidad</h3><p>Se validan correo, teléfono, código AnyDesk y longitudes. Un trabajador no puede tener dos solicitudes activas a la vez, con control de concurrencia.</p></div>
+      <div class="card"><h3><span class="ic">📎</span>Archivos privados</h3><p>Los adjuntos viven en almacenamiento <b>privado</b> y se descargan con <b>enlaces firmados temporales</b>. Tareas automáticas protegidas con un secreto limpian lo que ya no se usa.</p></div>
+      <div class="card"><h3><span class="ic">👥</span>Cuentas controladas</h3><p>No hay auto-registro: las cuentas las crea el equipo. El <b>primer ingreso</b> obliga a registrar contacto para poder recuperar la contraseña.</p></div>
+    </div>
+  </section>
+
+  <!-- 19 · COSTO-BENEFICIO -->
+  <section class="slide" data-sec="Costo–beneficio">
+    <span class="kicker">Costo–beneficio</span>
+    <h2>Antes vs. Después</h2>
+    <table>
+      <thead><tr><th style="width:22%">Aspecto</th><th class="col-antes" style="width:39%">Antes</th><th class="col-desp" style="width:39%">Después</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pedir ayuda</b></td><td class="antes">Llamadas, mensajes o ir caminando a Informática.</td><td class="desp">Una solicitud desde su propio puesto, en segundos.</td></tr>
+        <tr><td><b>Orden de atención</b></td><td class="antes">Atendía "el que más insistía"; algunos quedaban relegados.</td><td class="desp">Cola justa por orden de llegada, con posición visible.</td></tr>
+        <tr><td><b>Memoria del técnico</b></td><td class="antes">"Se me olvidó": pedidos en papelitos o en la cabeza.</td><td class="desp">Cada caso queda registrado con su estado y su historial.</td></tr>
+        <tr><td><b>Soporte remoto</b></td><td class="antes">Casi siempre había que ir en persona.</td><td class="desp">AnyDesk + adjuntos: muchos casos se resuelven a distancia.</td></tr>
+        <tr><td><b>Evidencia</b></td><td class="antes">Ninguna; el técnico llegaba a ciegas.</td><td class="desp">Foto o PDF del problema adjunto a la solicitud.</td></tr>
+        <tr><td><b>Supervisión</b></td><td class="antes">El jefe no sabía qué hacía cada quién.</td><td class="desp">Tablero en vivo: quién atiende qué y desde hace cuánto.</td></tr>
+        <tr><td><b>Indicadores y reportes</b></td><td class="antes">No existían.</td><td class="desp">KPIs, tasa de éxito y reporte mensual en PDF.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Resultado: menos interrupciones, menos traslados, atención más justa y, sobre todo, <b>trazabilidad</b> — ya nada se pierde.</p>
+  </section>
+
+  <!-- 20 · COSTO -->
+  <section class="slide" data-sec="Costo">
+    <span class="kicker">Inversión</span>
+    <h2>¿Cuánto va a costar?</h2>
+    <p class="lead">El sistema corre hoy sobre planes gratuitos. Solo habría que invertir si el uso crece de forma importante.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3><span class="ic">🟢</span>Escenario actual — operación gratuita</h3>
+        <table style="box-shadow:none;font-size:14.5px">
+          <tbody>
+            <tr><td>Base de datos, login y archivos (Supabase Free)</td><td class="money">S/ 0</td></tr>
+            <tr><td>Hosting web (Vercel Hobby)</td><td class="money">S/ 0</td></tr>
+            <tr><td>Dominio institucional <i>.gob.pe</i> (ya existente)</td><td class="money">S/ 0</td></tr>
+            <tr class="total"><td>Total mensual</td><td class="money">S/ 0</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:10px">Suficiente para el volumen actual de la municipalidad.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">📈</span>Escenario de crecimiento — producción robusta</h3>
+        <table style="box-shadow:none;font-size:14.5px">
+          <tbody>
+            <tr><td>Supabase Pro (US$ 25)</td><td class="money">≈ S/ 95</td></tr>
+            <tr><td>Hosting Pro (US$ 20) <i>o servidor municipal</i></td><td class="money">≈ S/ 76 · S/ 0</td></tr>
+            <tr><td>Dominio (ya existente)</td><td class="money">S/ 0</td></tr>
+            <tr class="total"><td>Total mensual estimado</td><td class="money">S/ 95 – 171</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:10px">Equivale a <b>≈ S/ 1,140 – 2,050 al año</b>.</p>
+      </div>
+    </div>
+    <p class="note">Cifras referenciales (tipo de cambio ≈ S/ 3.75 por US$), ajustables. Conviene escalar al plan de pago cuando se superen los límites gratuitos: ~500 MB de base de datos, ~1 GB de archivos o muchos usuarios concurrentes.</p>
+  </section>
+
+  <!-- 21 · CIERRE -->
+  <section class="slide closing" data-sec="Cierre">
+    <span class="kicker">En resumen</span>
+    <h2>Orden, evidencia y control</h2>
+    <p class="lead">El soporte técnico de la municipalidad deja de ser un caos de llamadas para convertirse en un proceso ordenado, medible y a costo casi cero.</p>
+    <div class="grid g3">
+      <div class="card"><h3><span class="ic">⏱️</span>Más rápido</h3><p>El trabajador pide desde su sitio; el técnico atiende por cola y muchos casos se resuelven en remoto.</p></div>
+      <div class="card"><h3><span class="ic">🔎</span>Más control</h3><p>El jefe ve todo en vivo, con indicadores y reportes mensuales para la gestión.</p></div>
+      <div class="card"><h3><span class="ic">💸</span>Más económico</h3><p>Hoy opera en planes gratuitos; el crecimiento cuesta una fracción de cualquier alternativa.</p></div>
+    </div>
+    <p class="note" style="color:#9fc3da;margin-top:22px">Soporte Municipal · Municipalidad Provincial de Ica · Área de Informática</p>
+  </section>
+
+</div>
+
+<!-- Overview / índice -->
+<div class="overview" id="overview"><h3>Índice — toca una diapositiva</h3><div class="ovgrid" id="ovgrid"></div></div>
+
+<div class="secflag" id="secflag">Portada</div>
+<div class="hint">← → para navegar · <b>I</b> índice · <b>F</b> pantalla completa</div>
+
+<nav class="nav">
+  <button id="prev">← Anterior</button>
+  <div class="progress"><i id="bar"></i></div>
+  <span class="count" id="count">1 / 1</span>
+  <button id="ov">☰ Índice</button>
+  <button id="next">Siguiente →</button>
+</nav>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let i = 0;
+  const bar = document.getElementById('bar');
+  const count = document.getElementById('count');
+  const secflag = document.getElementById('secflag');
+  const overview = document.getElementById('overview');
+  const ovgrid = document.getElementById('ovgrid');
+
+  function show(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    secflag.textContent = slides[i].dataset.sec || '';
+    location.hash = 'd' + (i + 1);
+    document.querySelector('.slide.active').scrollTop = 0;
+  }
+  const next = () => show(i + 1);
+  const prev = () => show(i - 1);
+
+  document.getElementById('next').onclick = next;
+  document.getElementById('prev').onclick = prev;
+  document.getElementById('ov').onclick = () => overview.classList.toggle('show');
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { next(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'i') overview.classList.toggle('show');
+    else if (e.key.toLowerCase() === 'f') { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    else if (e.key === 'Escape') overview.classList.remove('show');
+  });
+
+  // Build overview
+  slides.forEach((s, k) => {
+    const b = document.createElement('button');
+    let title = (s.querySelector('h1,h2')?.textContent || s.dataset.sec || '').trim();
+    if (k === 0) title = 'Soporte Municipal';
+    b.innerHTML = '<span class="n">' + (k + 1) + '</span><span class="t">' + title + '</span>';
+    b.onclick = () => { show(k); overview.classList.remove('show'); };
+    ovgrid.appendChild(b);
+  });
+
+  // Deep link (carga inicial y cambios de hash)
+  window.addEventListener('hashchange', () => {
+    const mm = location.hash.match(/^#d(\d+)$/);
+    if (mm) show(parseInt(mm[1], 10) - 1);
+  });
+  const m = (location.hash.match(/^#d(\d+)$/));
+  show(m ? parseInt(m[1], 10) - 1 : 0);
+</script>
+</body>
+</html>
