@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useState, useActionState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, useActionState } from 'react'
 import {
   IconCheck,
   IconBuilding,
@@ -75,7 +75,7 @@ export default function TecnicoPanel(props: Props) {
 
       <EtiquetaActualizado lastRefreshed={lastRefreshed} onRefresh={refresh} />
 
-      <ContenidoTecnico {...props} onColision={handleColision} />
+      <ContenidoTecnico {...props} onColision={handleColision} onRefresh={refresh} />
     </>
   )
 }
@@ -90,7 +90,8 @@ const ContenidoTecnico = memo(
     solicitudActiva,
     cola,
     onColision,
-  }: Props & { onColision: () => void }) {
+    onRefresh,
+  }: Props & { onColision: () => void; onRefresh: () => void }) {
     return (
       <div className="space-y-4">
         {/* Métricas: ESPERANDO y FINALIZADAS HOY */}
@@ -120,16 +121,16 @@ const ContenidoTecnico = memo(
         </div>
 
         {/* TU ESTADO ACTUAL */}
-        <CardEstadoActual estadoActual={estadoTecnico} />
+        <CardEstadoActual estadoActual={estadoTecnico} onRefresh={onRefresh} />
 
         {/* Solicitud activa — solo cuando atendiendo */}
         {estadoTecnico === 'atendiendo' && solicitudActiva && (
-          <CardSolicitudActiva solicitud={solicitudActiva} />
+          <CardSolicitudActiva solicitud={solicitudActiva} onRefresh={onRefresh} />
         )}
 
         {/* Cola de Espera — oculta en descanso y atendiendo */}
         {estadoTecnico !== 'descanso' && estadoTecnico !== 'atendiendo' && (
-          <ColaEspera cola={cola} onColision={onColision} />
+          <ColaEspera cola={cola} onColision={onColision} onRefresh={onRefresh} />
         )}
       </div>
     )
@@ -141,12 +142,25 @@ const ContenidoTecnico = memo(
 
 // ─── Subcomponentes ────────────────────────────────────────────────────────────
 
-function CardEstadoActual({ estadoActual }: { estadoActual: TecnicoEstado }) {
+function CardEstadoActual({
+  estadoActual,
+  onRefresh,
+}: {
+  estadoActual: TecnicoEstado
+  onRefresh: () => void
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     cambiarEstado,
     undefined,
   )
   const isAtendiendo = estadoActual === 'atendiendo'
+
+  // Tras un cambio de estado exitoso, refrescar la vista (patrón del trabajador).
+  const wasPendingRef = useRef(false)
+  useEffect(() => {
+    if (wasPendingRef.current && !pending && state === undefined) onRefresh()
+    wasPendingRef.current = pending
+  }, [pending, state, onRefresh])
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -196,7 +210,13 @@ function CardEstadoActual({ estadoActual }: { estadoActual: TecnicoEstado }) {
   )
 }
 
-function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
+function CardSolicitudActiva({
+  solicitud,
+  onRefresh,
+}: {
+  solicitud: SolicitudActiva
+  onRefresh: () => void
+}) {
   const [liberarState, liberarAction, liberarPending] = useActionState<ActionState, FormData>(
     liberarSolicitud,
     undefined,
@@ -206,6 +226,24 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
     undefined,
   )
   const pending = liberarPending || resolverPending
+
+  // Tras resolver o liberar con éxito, traer la cola fresca con un solo refresh
+  // (mismo patrón que el panel del trabajador; evita el redirect que recargaba).
+  const wasResolverPendingRef = useRef(false)
+  useEffect(() => {
+    if (wasResolverPendingRef.current && !resolverPending && resolverState === undefined) {
+      onRefresh()
+    }
+    wasResolverPendingRef.current = resolverPending
+  }, [resolverPending, resolverState, onRefresh])
+
+  const wasLiberarPendingRef = useRef(false)
+  useEffect(() => {
+    if (wasLiberarPendingRef.current && !liberarPending && liberarState === undefined) {
+      onRefresh()
+    }
+    wasLiberarPendingRef.current = liberarPending
+  }, [liberarPending, liberarState, onRefresh])
 
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -290,9 +328,11 @@ function CardSolicitudActiva({ solicitud }: { solicitud: SolicitudActiva }) {
 function ColaEspera({
   cola,
   onColision,
+  onRefresh,
 }: {
   cola: SolicitudCola[]
   onColision: () => void
+  onRefresh: () => void
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -314,6 +354,7 @@ function ColaEspera({
               solicitud={s}
               posicion={i + 1}
               onColision={onColision}
+              onRefresh={onRefresh}
             />
           ))}
         </div>
@@ -326,10 +367,12 @@ function ItemCola({
   solicitud,
   posicion,
   onColision,
+  onRefresh,
 }: {
   solicitud: SolicitudCola
   posicion: number
   onColision: () => void
+  onRefresh: () => void
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     atenderAhora,
@@ -341,6 +384,13 @@ function ItemCola({
       onColision()
     }
   }, [state, onColision])
+
+  // Al tomar el turno con éxito, refrescar para pasar a la vista de atención.
+  const wasPendingRef = useRef(false)
+  useEffect(() => {
+    if (wasPendingRef.current && !pending && state === undefined) onRefresh()
+    wasPendingRef.current = pending
+  }, [pending, state, onRefresh])
 
   return (
     <div className="rounded-lg border border-gray-200 p-3">
