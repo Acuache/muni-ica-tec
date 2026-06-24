@@ -25,6 +25,10 @@ type Props = {
   defaultSedeId?: string
   defaultAreaId?: string
   defaultSubareaId?: string
+  /** Notifica los ids actuales en cada cambio (incluyendo los reseteos de la
+   *  cascada). Opcional: lo usa el perfil para detectar cambios sin acoplarse
+   *  al estado interno; los demás callers leen los valores vía FormData. */
+  onCambio?: (ids: { sedeId: string; areaId: string; subareaId: string }) => void
 }
 
 export default function SelectsUbicacion({
@@ -35,6 +39,7 @@ export default function SelectsUbicacion({
   defaultSedeId = '',
   defaultAreaId = '',
   defaultSubareaId = '',
+  onCambio,
 }: Props) {
   // Cascade: se trabaja con id; el Server Action resuelve los nombres.
   const [sedeId, setSedeId] = useState(defaultSedeId)
@@ -46,14 +51,24 @@ export default function SelectsUbicacion({
   const subareasDeArea = areaId ? subareas.filter((sa) => sa.area_id === areaId) : []
 
   function handleSedeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSedeId(e.target.value)
+    const valor = e.target.value
+    setSedeId(valor)
     setAreaId('')
     setSubareaId('')
+    onCambio?.({ sedeId: valor, areaId: '', subareaId: '' })
   }
 
   function handleAreaChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setAreaId(e.target.value)
+    const valor = e.target.value
+    setAreaId(valor)
     setSubareaId('')
+    onCambio?.({ sedeId, areaId: valor, subareaId: '' })
+  }
+
+  function handleSubareaChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const valor = e.target.value
+    setSubareaId(valor)
+    onCambio?.({ sedeId, areaId, subareaId: valor })
   }
 
   return (
@@ -112,7 +127,7 @@ export default function SelectsUbicacion({
           name="subarea_id"
           required={required}
           value={subareaId}
-          onChange={(e) => setSubareaId(e.target.value)}
+          onChange={handleSubareaChange}
           disabled={!areaId}
           className={inputCls}
         >

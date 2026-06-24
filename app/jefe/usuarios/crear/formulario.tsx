@@ -212,8 +212,13 @@ function TabIndividual({ sedes, areas, subareas }: CatalogoProps) {
               id="telefono"
               name="telefono"
               type="tel"
+              inputMode="numeric"
+              maxLength={15}
+              onInput={(e) => {
+                e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '')
+              }}
               className={inputCls}
-              placeholder="987 654 321"
+              placeholder="987654321"
             />
           </div>
 

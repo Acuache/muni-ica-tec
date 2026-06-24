@@ -550,7 +550,12 @@ function EditarUsuarioModal({
               id={`telefono-${u.id}`}
               name="telefono"
               type="tel"
+              inputMode="numeric"
+              maxLength={15}
               defaultValue={u.telefono ?? ''}
+              onInput={(e) => {
+                e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '')
+              }}
               className={inputCls}
             />
           </div>
