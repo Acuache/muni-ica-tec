@@ -15,6 +15,7 @@ export type TecnicoEstado =
 export type SolicitudActiva = {
   id: string
   titulo: string
+  tipo_ayuda: string
   anydesk_code: string | null
   trabajador: string
   telefono: string | null
@@ -36,6 +37,14 @@ export type SolicitudCola = {
   subarea: string
   puesto: string
 }
+
+// SPEC 15, Cambio 2: los casos virtual-sin-código (convertidos por un técnico y
+// aún a la espera del código del trabajador) se apartan de la cola tomable.
+// NOT (tipo_ayuda='virtual' AND anydesk_code IS NULL)
+//   ≡ tipo_ayuda != 'virtual' OR anydesk_code IS NOT NULL.
+// El MISMO filtro va en la lista y en el conteo ESPERANDO para que no se
+// desalineen (mostrar "1 esperando" con cola vacía).
+const FILTRO_TOMABLE = 'tipo_ayuda.neq.virtual,anydesk_code.not.is.null'
 
 export default async function TecnicoPage() {
   const supabase = await createClient()
@@ -72,7 +81,8 @@ export default async function TecnicoPage() {
     supabase
       .from('solicitudes')
       .select('id', { count: 'exact', head: true })
-      .eq('estado', 'en_espera'),
+      .eq('estado', 'en_espera')
+      .or(FILTRO_TOMABLE),
     supabase
       .from('solicitudes')
       .select('id', { count: 'exact', head: true })
@@ -115,7 +125,7 @@ export default async function TecnicoPage() {
   if (estadoTecnico === 'atendiendo') {
     const { data: sol, error: solError } = await supabase
       .from('solicitudes')
-      .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, sede, area, subarea, puesto)')
+      .select('id, titulo, tipo_ayuda, anydesk_code, profiles!trabajador_id(username, telefono, sede, area, subarea, puesto)')
       .eq('tecnico_id', user.id)
       .eq('estado', 'en_proceso')
       .maybeSingle()
@@ -140,6 +150,7 @@ export default async function TecnicoPage() {
       solicitudActiva = {
         id: sol.id,
         titulo: sol.titulo,
+        tipo_ayuda: sol.tipo_ayuda,
         anydesk_code: sol.anydesk_code ?? null,
         trabajador: perfil?.username ?? '',
         telefono: perfil?.telefono ?? null,
@@ -155,6 +166,7 @@ export default async function TecnicoPage() {
       .from('solicitudes')
       .select('id, titulo, anydesk_code, profiles!trabajador_id(username, telefono, sede, area, subarea, puesto)')
       .eq('estado', 'en_espera')
+      .or(FILTRO_TOMABLE)
       .order('created_at', { ascending: true })
 
     if (colaError) {

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PANEL_POR_ROL, type RolApp } from '@/lib/autorizacion'
 import type { AdjuntoVista } from '@/lib/adjuntos/tipos'
+import { estaEnHorario, proximaApertura } from '@/lib/horario'
 import TrabajadorPanel from './panel'
 
 export default async function TrabajadorPage() {
@@ -30,7 +31,7 @@ export default async function TrabajadorPage() {
 
   const { data: solicitudActiva, error: solicitudError } = await supabase
     .from('solicitudes')
-    .select('id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, created_at')
+    .select('id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, anydesk_code, created_at')
     .eq('trabajador_id', user.id)
     .or('estado.eq.en_espera,and(estado.eq.en_proceso,confirmacion_trabajador.eq.false)')
     .limit(1)
@@ -43,53 +44,56 @@ export default async function TrabajadorPage() {
   }
 
   let posicionCola = 0
-  let tecnicoNombre: string | null = null
   let adjuntos: AdjuntoVista[] = []
 
   if (solicitudActiva) {
-    const tecnicoQuery = solicitudActiva.tecnico_id
-      ? supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', solicitudActiva.tecnico_id)
-          .single()
-      : null
-
-    const [posicionResult, tecnicoResult, adjuntosResult] = await Promise.all([
+    const [posicionResult, adjuntosResult] = await Promise.all([
       supabase.rpc('get_posicion_en_cola', { p_solicitud_id: solicitudActiva.id }),
-      tecnicoQuery,
       supabase
         .from('solicitud_adjuntos')
         .select('id, tipo, nombre_original, tamano_bytes')
         .eq('solicitud_id', solicitudActiva.id)
         .order('created_at', { ascending: true }),
     ])
-    // Datos secundarios: si fallan se degrada a posición 0 / técnico sin
-    // nombre / sin adjuntos en vez de tumbar el panel.
+    // Datos secundarios: si fallan se degrada a posición 0 / sin adjuntos en
+    // vez de tumbar el panel.
     if (posicionResult.error) {
       console.error('TrabajadorPage: get_posicion_en_cola falló', posicionResult.error)
-    }
-    if (tecnicoResult?.error) {
-      console.error('TrabajadorPage: lectura de técnico falló', tecnicoResult.error)
     }
     if (adjuntosResult.error) {
       console.error('TrabajadorPage: lectura de adjuntos falló', adjuntosResult.error)
     }
     posicionCola = posicionResult.data ?? 0
-    tecnicoNombre = tecnicoResult?.data?.username ?? null
     adjuntos = (adjuntosResult.data as AdjuntoVista[]) ?? []
+  }
+
+  // Horario de atención (SPEC 15, Cambio 3): se calcula con la hora del servidor
+  // y se pasa ya resuelto al cliente (texto del próximo día hábil, en es-PE/Lima).
+  const ahora = new Date()
+  const fueraDeHorario = !estaEnHorario(ahora)
+  let proximaAperturaTexto: string | null = null
+  if (fueraDeHorario) {
+    const partes = new Intl.DateTimeFormat('es-PE', {
+      timeZone: 'America/Lima',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).formatToParts(proximaApertura(ahora))
+    const parte = (t: string) => partes.find((p) => p.type === t)?.value ?? ''
+    proximaAperturaTexto = `${parte('weekday')} ${parte('day')} de ${parte('month')}`
   }
 
   return (
     <TrabajadorPanel
       solicitudActiva={solicitudActiva ?? null}
       posicionCola={posicionCola}
-      tecnicoNombre={tecnicoNombre}
       adjuntos={adjuntos}
       sede={profile?.sede ?? null}
       area={profile?.area ?? null}
       subarea={profile?.subarea ?? null}
       puesto={profile?.puesto ?? null}
+      fueraDeHorario={fueraDeHorario}
+      proximaAperturaTexto={proximaAperturaTexto}
     />
   )
 }

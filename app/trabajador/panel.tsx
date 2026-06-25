@@ -7,12 +7,14 @@ import {
   IconUsersGroup,
   IconCircleCheck,
   IconCircleX,
+  IconClock,
 } from '@tabler/icons-react'
 import {
   crearSolicitud,
   cancelarSolicitud,
   confirmarResolucion,
   registrarAdjuntos,
+  registrarAnydeskCode,
 } from './actions'
 import type { ActionState } from './actions'
 import { createClient } from '@/lib/supabase/client'
@@ -30,17 +32,19 @@ type Solicitud = {
   descripcion: string | null
   estado: string
   tecnico_id: string | null
+  anydesk_code: string | null
   created_at: string
 }
 type Props = {
   solicitudActiva: Solicitud | null
   posicionCola: number
-  tecnicoNombre: string | null
   adjuntos: AdjuntoVista[]
   sede: string | null
   area: string | null
   subarea: string | null
   puesto: string | null
+  fueraDeHorario: boolean
+  proximaAperturaTexto: string | null
 }
 
 // No refrescar automáticamente mientras el usuario escribe en un campo.
@@ -82,30 +86,139 @@ const ContenidoTrabajador = memo(
   function ContenidoTrabajador({
     solicitudActiva,
     posicionCola,
-    tecnicoNombre,
     adjuntos,
     sede,
     area,
     subarea,
     puesto,
+    fueraDeHorario,
+    proximaAperturaTexto,
     onRefresh,
   }: Props & { onRefresh: () => void }) {
-    return solicitudActiva ? (
-      <PantallaSeguimiento
-        solicitud={solicitudActiva}
-        posicionCola={posicionCola}
-        tecnicoNombre={tecnicoNombre}
-        adjuntos={adjuntos}
-        onRefresh={onRefresh}
-      />
-    ) : (
-      <FormularioNuevaSolicitud sede={sede} area={area} subarea={subarea} puesto={puesto} />
+    return (
+      <>
+        {/* Modal obligatorio: el técnico convirtió el caso a virtual y falta el
+            código AnyDesk. Sin botón de cerrar; solo se va al enviar (SPEC 15). */}
+        {solicitudActiva &&
+          solicitudActiva.tipo_ayuda === 'virtual' &&
+          !solicitudActiva.anydesk_code && (
+            <ModalAnydesk solicitudId={solicitudActiva.id} />
+          )}
+        {fueraDeHorario && (
+          <AvisoHorario proximaAperturaTexto={proximaAperturaTexto} />
+        )}
+        {solicitudActiva ? (
+          <PantallaSeguimiento
+            solicitud={solicitudActiva}
+            posicionCola={posicionCola}
+            adjuntos={adjuntos}
+            onRefresh={onRefresh}
+          />
+        ) : (
+          <FormularioNuevaSolicitud sede={sede} area={area} subarea={subarea} puesto={puesto} />
+        )}
+      </>
     )
   },
   (a, b) =>
-    JSON.stringify([a.solicitudActiva, a.posicionCola, a.tecnicoNombre, a.adjuntos, a.sede, a.area, a.subarea, a.puesto]) ===
-    JSON.stringify([b.solicitudActiva, b.posicionCola, b.tecnicoNombre, b.adjuntos, b.sede, b.area, b.subarea, b.puesto]),
+    JSON.stringify([a.solicitudActiva, a.posicionCola, a.adjuntos, a.sede, a.area, a.subarea, a.puesto, a.fueraDeHorario, a.proximaAperturaTexto]) ===
+    JSON.stringify([b.solicitudActiva, b.posicionCola, b.adjuntos, b.sede, b.area, b.subarea, b.puesto, b.fueraDeHorario, b.proximaAperturaTexto]),
 )
+
+// Aviso fuera del horario de atención (SPEC 15, Cambio 3). Solo informa: no
+// desactiva el formulario ni la cola. El texto del próximo día hábil ya viene
+// resuelto desde el servidor (zona de Lima).
+function AvisoHorario({
+  proximaAperturaTexto,
+}: {
+  proximaAperturaTexto: string | null
+}) {
+  return (
+    <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <IconClock size={20} className="mt-0.5 shrink-0 text-amber-600" />
+      <div>
+        <p className="text-sm font-medium text-amber-900">
+          Fuera del horario de atención (Lun–Vie 8:00–14:30).
+        </p>
+        <p className="mt-0.5 text-sm text-amber-800">
+          {proximaAperturaTexto
+            ? `Tu solicitud será atendida el ${proximaAperturaTexto} a las 8:00.`
+            : 'Tu solicitud será atendida el próximo día hábil a las 8:00.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// Modal obligatorio para el código AnyDesk (SPEC 15, Cambio 2). No tiene botón
+// de cerrar ni cierre por backdrop/Escape: la única salida es enviar un código
+// numérico (o que el técnico revierta a presencial, lo que quita el modal en el
+// siguiente refresco).
+function ModalAnydesk({ solicitudId }: { solicitudId: string }) {
+  const router = useRouter()
+  const [codigo, setCodigo] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!/^\d+$/.test(codigo)) {
+      setError('El código AnyDesk debe contener solo números.')
+      return
+    }
+    setError(null)
+    setPending(true)
+    try {
+      const res = await registrarAnydeskCode(solicitudId, codigo)
+      if (res?.error) {
+        setError(res.error)
+        return
+      }
+      router.refresh()
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+        <h2 className="text-lg font-bold text-gray-900">
+          Ingresa tu código AnyDesk
+        </h2>
+        <p className="mt-1 text-sm text-gray-600">
+          El técnico cambió tu atención a{' '}
+          <span className="font-medium">virtual</span>. Para que pueda
+          conectarse, ingresa tu código AnyDesk (solo números).
+        </p>
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoFocus
+            required
+            maxLength={25}
+            value={codigo}
+            onChange={(e) => {
+              setCodigo(e.target.value)
+              if (error) setError(null)
+            }}
+            placeholder="Ej: 123456789"
+            className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? 'Enviando…' : 'Enviar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 function FormularioNuevaSolicitud({
   sede,
@@ -352,13 +465,11 @@ function FormularioNuevaSolicitud({
 function PantallaSeguimiento({
   solicitud,
   posicionCola,
-  tecnicoNombre,
   adjuntos,
   onRefresh,
 }: {
   solicitud: Solicitud
   posicionCola: number
-  tecnicoNombre: string | null
   adjuntos: AdjuntoVista[]
   onRefresh: () => void
 }) {
@@ -369,11 +480,7 @@ function PantallaSeguimiento({
         <CardPosicionCola posicion={posicionCola} />
       )}
       {solicitud.estado === 'en_proceso' && (
-        <CardResolucion
-          solicitudId={solicitud.id}
-          tecnicoNombre={tecnicoNombre}
-          onRefresh={onRefresh}
-        />
+        <CardResolucion solicitudId={solicitud.id} onRefresh={onRefresh} />
       )}
     </div>
   )
@@ -381,11 +488,9 @@ function PantallaSeguimiento({
 
 function CardResolucion({
   solicitudId,
-  tecnicoNombre,
   onRefresh,
 }: {
   solicitudId: string
-  tecnicoNombre: string | null
   onRefresh: () => void
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -408,10 +513,14 @@ function CardResolucion({
         Por favor, confirma la resolución para cerrar el caso.
       </p>
 
-      <p className="mt-3 text-sm text-gray-700">
-        El caso fue tomado por el técnico{' '}
-        <span className="font-semibold text-gray-900">{tecnicoNombre}</span>
-      </p>
+      <div className="mt-3 rounded-lg bg-blue-50 px-3 py-2">
+        <p className="text-sm font-medium text-blue-900">
+          Un técnico ya está atendiendo tu caso.
+        </p>
+        <p className="text-sm text-blue-800">
+          Tiempo de atención: máximo 20 minutos.
+        </p>
+      </div>
 
       <form action={action} className="mt-4 space-y-4">
         <input type="hidden" name="solicitud_id" value={solicitudId} />

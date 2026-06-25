@@ -70,6 +70,45 @@ export async function crearSolicitud(
   return { ok: true, solicitudId: data.id }
 }
 
+// SPEC 15, Cambio 2: el trabajador registra su código AnyDesk cuando el técnico
+// convirtió su caso a virtual y quedó "esperando código". El UPDATE solo aplica
+// si sigue virtual y sin código (sirve en en_espera y en_proceso, y persiste
+// aunque el técnico haya liberado el caso).
+export async function registrarAnydeskCode(
+  solicitudId: string,
+  code: string,
+): Promise<ActionState> {
+  if (!esUuidValido(solicitudId)) return { error: 'Solicitud no identificada.' }
+  const codigo = (code ?? '').trim()
+  if (!esAnydeskValido(codigo)) {
+    return { error: 'El código AnyDesk debe contener solo números.' }
+  }
+
+  const auth = await autorizar(['trabajador'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase, user } = auth
+
+  // Condicional optimista: 0 filas ⇒ el caso volvió a presencial o ya tiene
+  // código (otra pestaña), recarga.
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .update({ anydesk_code: codigo })
+    .eq('id', solicitudId)
+    .eq('trabajador_id', user.id)
+    .eq('tipo_ayuda', 'virtual')
+    .is('anydesk_code', null)
+    .select('id')
+
+  if (error) return { error: 'No se pudo registrar el código. Inténtalo de nuevo.' }
+  if (!data || data.length === 0) {
+    return { error: 'La solicitud ya cambió de estado. Actualiza la página.' }
+  }
+
+  // Éxito: el cliente refresca; el modal desaparece al dejar de cumplirse
+  // virtual ∧ sin código.
+  return
+}
+
 export async function cancelarSolicitud(
   _prevState: ActionState,
   formData: FormData,

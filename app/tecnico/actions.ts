@@ -14,6 +14,9 @@ const ESTADOS_MANUALES: TecnicoEstadoManual[] = [
   'descanso',
 ]
 
+const TIPOS_AYUDA = ['presencial', 'virtual'] as const
+type TipoAyuda = (typeof TIPOS_AYUDA)[number]
+
 export async function cambiarEstado(
   _prevState: ActionState,
   formData: FormData,
@@ -214,6 +217,49 @@ export async function liberarSolicitud(
   if (statusError) return { error: 'No se pudo actualizar tu estado.' }
 
   // Éxito: el cliente refresca la cola (sin redirect, evita recargas duras).
+  return
+}
+
+// SPEC 15, Cambio 2: el técnico dueño cambia el tipo de ayuda mientras atiende.
+// Al pasar a presencial se limpia el código AnyDesk; al pasar a virtual sin
+// código, el caso queda "esperando código" (lo deriva la UI/queries de otros
+// pasos a partir de tipo_ayuda='virtual' ∧ anydesk_code IS NULL).
+export async function cambiarTipoAyuda(
+  solicitudId: string,
+  nuevoTipo: string,
+): Promise<ActionState> {
+  if (!esUuidValido(solicitudId)) return { error: 'Solicitud no identificada.' }
+  if (!TIPOS_AYUDA.includes(nuevoTipo as TipoAyuda)) {
+    return { error: 'Tipo de ayuda no válido.' }
+  }
+
+  const auth = await autorizar(['tecnico'])
+  if (!auth.ok) return { error: auth.error }
+  const { supabase, user } = auth
+
+  const updates =
+    nuevoTipo === 'presencial'
+      ? { tipo_ayuda: 'presencial', anydesk_code: null }
+      : { tipo_ayuda: 'virtual' }
+
+  // Solo el técnico dueño y solo mientras atiende (en_proceso). Condicional
+  // optimista: 0 filas ⇒ el caso ya cambió de estado/dueño, recarga.
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .update(updates)
+    .eq('id', solicitudId)
+    .eq('tecnico_id', user.id)
+    .eq('estado', 'en_proceso')
+    .select('id')
+
+  if (error) {
+    return { error: 'No se pudo cambiar el tipo de ayuda. Inténtalo de nuevo.' }
+  }
+  if (!data || data.length === 0) {
+    return { error: 'La solicitud ya cambió de estado. Actualiza la página.' }
+  }
+
+  // Éxito: el cliente refresca la card (sin redirect, evita recargas duras).
   return
 }
 

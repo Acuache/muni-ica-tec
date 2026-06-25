@@ -10,7 +10,7 @@ import {
   IconCircleCheck,
   IconAlertCircle,
 } from '@tabler/icons-react'
-import { cambiarEstado, atenderAhora, liberarSolicitud, confirmarResolucionTecnico } from './actions'
+import { cambiarEstado, atenderAhora, liberarSolicitud, confirmarResolucionTecnico, cambiarTipoAyuda } from './actions'
 import type { ActionState } from './actions'
 import type { TecnicoEstado, SolicitudActiva, SolicitudCola } from './page'
 import { usePolling } from '@/lib/use-polling'
@@ -225,7 +225,35 @@ function CardSolicitudActiva({
     confirmarResolucionTecnico,
     undefined,
   )
-  const pending = liberarPending || resolverPending
+  // SPEC 15, Cambio 3: "Dejar para mañana" reutiliza liberarSolicitud (devuelve
+  // el caso a la cola por antigüedad), con su propia etiqueta y confirmación.
+  const [dejarState, dejarAction, dejarPending] = useActionState<ActionState, FormData>(
+    liberarSolicitud,
+    undefined,
+  )
+  const pending = liberarPending || resolverPending || dejarPending
+
+  // SPEC 15, Cambio 2: cambiar el tipo de ayuda presencial↔virtual mientras se
+  // atiende. Llamada directa + refresh (no useActionState: args posicionales).
+  const [tipoPending, setTipoPending] = useState(false)
+  const [tipoError, setTipoError] = useState<string | null>(null)
+  const esperandoCodigo = solicitud.tipo_ayuda === 'virtual' && !solicitud.anydesk_code
+
+  async function handleCambiarTipo(nuevoTipo: 'presencial' | 'virtual') {
+    if (nuevoTipo === solicitud.tipo_ayuda || tipoPending || pending) return
+    setTipoError(null)
+    setTipoPending(true)
+    try {
+      const res = await cambiarTipoAyuda(solicitud.id, nuevoTipo)
+      if (res?.error) {
+        setTipoError(res.error)
+        return
+      }
+      onRefresh()
+    } finally {
+      setTipoPending(false)
+    }
+  }
 
   // Tras resolver o liberar con éxito, traer la cola fresca con un solo refresh
   // (mismo patrón que el panel del trabajador; evita el redirect que recargaba).
@@ -244,6 +272,14 @@ function CardSolicitudActiva({
     }
     wasLiberarPendingRef.current = liberarPending
   }, [liberarPending, liberarState, onRefresh])
+
+  const wasDejarPendingRef = useRef(false)
+  useEffect(() => {
+    if (wasDejarPendingRef.current && !dejarPending && dejarState === undefined) {
+      onRefresh()
+    }
+    wasDejarPendingRef.current = dejarPending
+  }, [dejarPending, dejarState, onRefresh])
 
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -281,11 +317,44 @@ function CardSolicitudActiva({
         </p>
       </div>
 
-      {solicitud.anydesk_code && (
+      {/* Control de tipo de atención (SPEC 15, Cambio 2) */}
+      <div className="mt-3">
+        <p className="mb-1 text-xs font-medium text-gray-500">Tipo de atención</p>
+        <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
+          {(['presencial', 'virtual'] as const).map((tipo) => {
+            const activo = solicitud.tipo_ayuda === tipo
+            return (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => handleCambiarTipo(tipo)}
+                disabled={activo || tipoPending || pending}
+                className={[
+                  'rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
+                  activo ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100',
+                  !activo && (tipoPending || pending) ? 'cursor-not-allowed opacity-60' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {tipo}
+              </button>
+            )
+          })}
+        </div>
+        {tipoError && <p className="mt-1 text-xs text-red-600">{tipoError}</p>}
+      </div>
+
+      {solicitud.anydesk_code ? (
         <p className="mt-2 inline-block rounded bg-white px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
           Código AnyDesk: {solicitud.anydesk_code}
         </p>
-      )}
+      ) : esperandoCodigo ? (
+        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">
+          <IconClock size={14} className="shrink-0 text-amber-600" />
+          Esperando código AnyDesk del trabajador…
+        </div>
+      ) : null}
 
       {solicitud.adjuntos.length > 0 && (
         <div className="mt-3 border-t border-blue-200 pt-3">
@@ -293,30 +362,59 @@ function CardSolicitudActiva({
         </div>
       )}
 
-      <form action={resolverAction} className="mt-3">
-        <input type="hidden" name="solicitud_id" value={solicitud.id} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {resolverPending ? 'Guardando…' : 'Resuelto'}
-        </button>
-      </form>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="space-y-2">
+          <form action={resolverAction}>
+            <input type="hidden" name="solicitud_id" value={solicitud.id} />
+            <button
+              type="submit"
+              disabled={pending || tipoPending}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {resolverPending ? 'Guardando…' : 'Resuelto'}
+            </button>
+          </form>
 
-      <form action={liberarAction} className="mt-2">
-        <input type="hidden" name="solicitud_id" value={solicitud.id} />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg border border-dashed border-gray-400 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-red-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {liberarPending ? 'Liberando…' : 'Liberar'}
-        </button>
-      </form>
+          <form action={liberarAction}>
+            <input type="hidden" name="solicitud_id" value={solicitud.id} />
+            <button
+              type="submit"
+              disabled={pending || tipoPending}
+              className="rounded-lg border border-dashed border-gray-400 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-red-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {liberarPending ? 'Liberando…' : 'Liberar'}
+            </button>
+          </form>
+        </div>
+
+        {/* "Dejar para mañana" en la esquina inferior derecha de la card
+            (SPEC 15, Cambio 3). */}
+        <form action={dejarAction}>
+          <input type="hidden" name="solicitud_id" value={solicitud.id} />
+          <button
+            type="submit"
+            disabled={pending || tipoPending}
+            onClick={(e) => {
+              if (
+                !window.confirm(
+                  '¿Dejar este caso para mañana? Volverá a la cola en su posición por antigüedad y quedarás disponible.',
+                )
+              ) {
+                e.preventDefault()
+              }
+            }}
+            className="rounded-lg bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {dejarPending ? 'Procesando…' : 'Dejar para mañana'}
+          </button>
+        </form>
+      </div>
 
       {liberarState?.error && (
         <p className="mt-2 text-xs text-red-600">{liberarState.error}</p>
+      )}
+      {dejarState?.error && (
+        <p className="mt-2 text-xs text-red-600">{dejarState.error}</p>
       )}
       {resolverState?.error && (
         <p className="mt-2 text-xs text-red-600">{resolverState.error}</p>
