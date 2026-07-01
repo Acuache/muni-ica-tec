@@ -23,10 +23,15 @@ compartida por los tres roles:
 
 - **Trabajador** — crea una solicitud (tipo de ayuda presencial/virtual, título,
   descripción, y opcionalmente código AnyDesk + adjuntos), ve su posición en la cola,
-  puede cancelarla y confirma la resolución (Resuelto / No resuelto).
+  puede cancelarla y confirma la resolución (Resuelto / No resuelto). Mientras lo
+  atienden ve un aviso fijo ("Un técnico ya está atendiendo tu caso", máx. 20 min) —
+  **no** el nombre del técnico (SPEC 15). Si el técnico convierte su caso a virtual,
+  un **modal obligatorio** le pide el código AnyDesk. Fuera del horario de atención ve
+  un aviso, pero el formulario sigue usable.
 - **Técnico** — ve la cola de espera, atiende solicitudes ("Atender ahora"),
   cambia su propio estado (Disponible / En Oficina / Virtual / Descanso) y ve sus
-  métricas del día.
+  métricas del día. Mientras atiende un caso puede cambiar su tipo de ayuda
+  presencial↔virtual y dejarlo para mañana (devolviéndolo a la cola por antigüedad).
 - **Jefe de informática** — panel de control: KPIs (esperando, solucionados hoy,
   tasa de éxito, no solucionados / escalamiento), cola completa, estado de los
   técnicos con indicador "última actualización hace X", historial, reportes mensuales
@@ -63,11 +68,14 @@ npm run lint    # eslint
 
 ## Variables de entorno (`.env.local`)
 
-Ver `.env.local.example`. Cuatro claves:
+Ver `.env.local.example`. Cinco claves:
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — clientes browser/server (sujetos a RLS).
 - `SUPABASE_SERVICE_ROLE_KEY` — solo servidor, **salta RLS**. Únicamente en `lib/supabase/admin.ts`.
 - `CRON_SECRET` — protege los endpoints de cron (`app/api/cron/*`).
+- `NEXT_PUBLIC_SITE_URL` — base para armar el link de recuperación de contraseña del
+  correo. En local cae a `http://localhost:3000`; en producción es **obligatoria** y
+  sin barra final.
 
 ## Arquitectura
 
@@ -116,6 +124,15 @@ dejar entrar a cualquier panel.
 cuando la pestaña está oculta y refresca al volver. `components/etiqueta-actualizado.tsx`
 muestra "actualizado hace X". **No** se usa Supabase Realtime (es spec futuro/opcional).
 
+### Horario de atención (SPEC 15)
+
+`lib/horario.ts` fija el horario **en código**: Lun–Vie 08:00–14:30, zona
+`America/Lima` (UTC-5, sin DST). Expone `estaEnHorario(fecha)` y `proximaApertura(fecha)`,
+que leen el "reloj de pared" de Lima con `Intl`/`timeZone` para no depender de la zona del
+servidor. **Fuera de horario no se desactiva ni cancela nada:** el RSC del trabajador
+calcula `fueraDeHorario` y el panel solo muestra un aviso; la cola persiste al día siguiente
+y nada automático ocurre a las 14:30. No hay horario configurable ni feriados (spec futuro).
+
 ### Modelo de datos (resumen; la verdad está en `supabase/migrations/`)
 
 - **Enums:** `user_role` (jefe/tecnico/trabajador), `solicitud_estado`
@@ -123,14 +140,24 @@ muestra "actualizado hace X". **No** se usa Supabase Realtime (es spec futuro/op
   (disponible/atendiendo/en_oficina/virtual/descanso), `ayuda_tipo` (presencial/virtual).
 - **`profiles`** (1:1 con `auth.users` vía trigger `handle_new_user`), **`solicitudes`**,
   **`technician_status`** (solo técnicos).
-- **Catálogo de ubicación** (SPEC 13): `sedes → areas → subareas`, jerárquico. La vieja
-  tabla `areas` (texto libre) y `solicitudes.area_id` fueron eliminadas; la ubicación
-  vive en `profiles`. No reintroduzcas el modelo viejo.
+- **Catálogo de ubicación** (SPEC 13): `sedes → areas → subareas`, jerárquico (seed
+  vigente: 11 sedes con sus áreas/subáreas, ver `20260626000001_…`). La vieja tabla
+  `areas` (texto libre) y `solicitudes.area_id` fueron eliminadas. La ubicación vive en
+  `profiles` como **snapshot de texto** (`sede`/`area`/`subarea`/`puesto`), no como FK:
+  el formulario manda ids del catálogo y la Server Action resuelve y valida la jerarquía,
+  guardando los nombres canónicos. Si un nombre ya no existe tras reordenar el catálogo,
+  el usuario re-elige al editar. No reintroduzcas el modelo viejo ni FKs al catálogo.
 - **Adjuntos** (SPEC 12): `solicitud_adjuntos` + bucket de Storage. El navegador sube los
   bytes (imágenes webp comprimidas / PDF); la Server Action solo registra metadatos y
   verifica propiedad.
 - **Doble confirmación** (SPEC 08): `confirmacion_tecnico` + `confirmacion_trabajador`;
   una solicitud pasa a `solucionado` solo con ambas.
+- **Estado derivado "esperando código"** (SPEC 15): no se persiste; es
+  `tipo_ayuda = 'virtual' AND anydesk_code IS NULL` (solo ocurre cuando un técnico
+  convierte un caso presencial→virtual). Mientras se cumple, el caso **se aparta de la
+  cola tomable y del conteo ESPERANDO**, y al trabajador le aparece el modal del código.
+  Ojo: SPEC 10 (H-29) acotó el `UPDATE` de `solicitudes` **por columna**; editar
+  `tipo_ayuda`/`anydesk_code` exigió el `grant` de `20260625170230_…`.
 - **Índice único parcial:** una sola solicitud activa por trabajador.
 - Las políticas RLS modelan el acceso por rol en cada tabla; cámbialas en una migración,
   no en código.
@@ -144,11 +171,16 @@ por `CRON_SECRET`. Los PDFs de reporte se generan en `lib/reportes/`.
 
 - `app/<rol>/` — un segmento por rol (`trabajador`, `tecnico`, `jefe`) con `layout.tsx`
   (guarda de sesión + shell), `page.tsx` (RSC que lee datos), `panel.tsx`/`shell.tsx`
-  (cliente), `actions.ts` (Server Actions), `loading.tsx` y `error.tsx`.
+  (cliente), `actions.ts` (Server Actions), `loading.tsx` y `error.tsx`. Cada rol tiene
+  además su subpágina `perfil/` (la edita el dueño, cualquiera de los 3 roles).
+- `app/perfil/` — lógica **compartida** del perfil, no es una ruta: `actions.ts`
+  (`actualizarDatosPerfil`, `cambiarContrasena`) y `ubicacion.ts` (carga del catálogo y
+  resolución de los ids actuales). La consumen las tres `app/<rol>/perfil/page.tsx`.
 - `app/primer-ingreso/`, `app/login/`, `app/solicitar-recuperacion/`,
   `app/actualizar-contrasena/` — flujos de cuenta.
-- `components/` — UI reutilizable (incl. `components/ui/` shadcn). `lib/` — utilidades,
-  clientes Supabase, validación, polling, adjuntos, reportes. Alias de import `@/…`.
+- `components/` — UI reutilizable (incl. `components/ui/` shadcn; `datos-perfil.tsx`,
+  `selects-ubicacion.tsx`, `modal-exito.tsx`). `lib/` — utilidades, clientes Supabase,
+  validación, polling, adjuntos, reportes, horario. Alias de import `@/…`.
 
 ## Convenciones
 
@@ -170,7 +202,7 @@ feature grande sin un spec aprobado.
 - El plan de qué specs existen y cómo dependen entre sí está en
   **[spec-draft.md](./spec-draft.md)**. Léelo antes de proponer arquitectura.
 - Los specs ya escritos viven en `specs/` (numerados `NN-slug.md`). El núcleo (01–07) y
-  varias extensiones (07b–14) ya están implementados; consúltalos como fuente de verdad
+  las extensiones (07b–15) ya están implementados; consúltalos como fuente de verdad
   del comportamiento de cada feature.
 - Flujo:
   1. `/spec <descripción>` — diseña un spec sección por sección (no escribe código).

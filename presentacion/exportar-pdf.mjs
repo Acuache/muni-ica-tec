@@ -8,16 +8,30 @@
  *
  *   node presentacion/construir.mjs   # primero regenera el HTML
  *   node presentacion/exportar-pdf.mjs
+ *
+ *   node presentacion/construir.mjs trabajador      # variante
+ *   node presentacion/exportar-pdf.mjs trabajador
+ *
+ * Con un argumento <nombre>, lee `presentacion-<nombre>.html` y escribe
+ * `presentacion-<nombre>.pdf` (sin argumento mantiene el comportamiento por defecto).
  */
 import { chromium } from 'playwright'
 import { jsPDF } from 'jspdf'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, existsSync } from 'node:fs'
 
 const DIR = dirname(fileURLToPath(import.meta.url))
-const htmlUrl = pathToFileURL(join(DIR, 'presentacion.html')).href
-const pdfPath = join(DIR, 'presentacion.pdf')
+const variante = process.argv[2]?.trim()
+const sufijo = variante ? `-${variante}` : ''
+const htmlPath = join(DIR, `presentacion${sufijo}.html`)
+const htmlUrl = pathToFileURL(htmlPath).href
+const pdfPath = join(DIR, `presentacion${sufijo}.pdf`)
+
+if (!existsSync(htmlPath)) {
+  console.error(`✗ No existe presentacion${sufijo}.html. Corre primero: node presentacion/construir.mjs ${variante ?? ''}`.trim())
+  process.exit(1)
+}
 
 const W = 1440, H = 900
 
@@ -45,4 +59,4 @@ for (let n = 1; n <= total; n++) {
 await browser.close()
 const ab = doc.output('arraybuffer')
 writeFileSync(pdfPath, Buffer.from(ab))
-console.log(`\n✅ presentacion.pdf generado (${total} páginas) en presentacion/presentacion.pdf`)
+console.log(`\n✅ presentacion${sufijo}.pdf generado (${total} páginas) en presentacion/presentacion${sufijo}.pdf`)
