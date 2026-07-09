@@ -33,7 +33,6 @@ type Solicitud = {
   estado: string
   tecnico_id: string | null
   anydesk_code: string | null
-  confirmacion_trabajador: boolean
   created_at: string
 }
 type Props = {
@@ -480,29 +479,9 @@ function PantallaSeguimiento({
       {solicitud.estado === 'en_espera' && (
         <CardPosicionCola posicion={posicionCola} />
       )}
-      {solicitud.estado === 'en_proceso' &&
-        (solicitud.confirmacion_trabajador ? (
-          <CardEsperandoCierre />
-        ) : (
-          <CardResolucion solicitudId={solicitud.id} onRefresh={onRefresh} />
-        ))}
-    </div>
-  )
-}
-
-// El trabajador ya confirmó "Resuelto" pero el técnico aún no: el caso sigue
-// en_proceso hasta la doble confirmación (SPEC 08). Sin esta card, el panel
-// mostraría el formulario de nueva solicitud que el índice único rechaza.
-function CardEsperandoCierre() {
-  return (
-    <div className="rounded-xl border border-green-100 bg-green-50 p-4">
-      <p className="flex items-center gap-2 font-semibold text-green-900">
-        <IconCircleCheck size={18} />
-        Confirmaste que tu problema fue resuelto.
-      </p>
-      <p className="mt-1 text-sm text-green-800">
-        El caso se cerrará en cuanto el técnico también confirme la resolución.
-      </p>
+      {solicitud.estado === 'en_proceso' && (
+        <CardResolucion solicitudId={solicitud.id} onRefresh={onRefresh} />
+      )}
     </div>
   )
 }

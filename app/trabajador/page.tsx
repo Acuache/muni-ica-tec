@@ -29,16 +29,15 @@ export default async function TrabajadorPage() {
     redirect(PANEL_POR_ROL[profile?.rol as RolApp] ?? '/login')
   }
 
-  // Incluye la en_proceso ya confirmada por el trabajador: si se ocultara, el
-  // panel mostraría el formulario de nueva solicitud que el índice único
-  // rechazaría ("ya tienes una solicitud activa").
+  // La en_proceso ya confirmada por el trabajador NO cuenta como activa: el
+  // trabajador vuelve al formulario y puede pedir ayuda de nuevo aunque el
+  // técnico se olvide de confirmar. El índice único usa el mismo criterio
+  // (migración solicitud_confirmada_no_bloquea), así el insert no choca.
   const { data: solicitudActiva, error: solicitudError } = await supabase
     .from('solicitudes')
-    .select(
-      'id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, anydesk_code, confirmacion_trabajador, created_at',
-    )
+    .select('id, tipo_ayuda, titulo, descripcion, estado, tecnico_id, anydesk_code, created_at')
     .eq('trabajador_id', user.id)
-    .in('estado', ['en_espera', 'en_proceso'])
+    .or('estado.eq.en_espera,and(estado.eq.en_proceso,confirmacion_trabajador.eq.false)')
     .limit(1)
     .maybeSingle()
 
