@@ -156,11 +156,6 @@ export default function DatosPerfil({
     if (passOk) setAckPass(passState)
   }
 
-  // Si el puesto guardado no es uno de los 3 fijos (filas grandfathered), lo
-  // mostramos como opción extra para no forzar un cambio involuntario.
-  const opcionesPuesto =
-    puesto && !PUESTOS.includes(puesto) ? [puesto, ...PUESTOS] : PUESTOS
-
   // "Guardar cambios" se habilita solo si algún campo difiere del valor guardado
   // (patrón "dirty", derivado en render). Tras guardar, los props se refrescan a
   // los valores nuevos y el botón vuelve a deshabilitarse solo.
@@ -246,7 +241,7 @@ export default function DatosPerfil({
                   className={inputCls}
                 >
                   <option value="">Selecciona un puesto…</option>
-                  {opcionesPuesto.map((p) => (
+                  {PUESTOS.map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>

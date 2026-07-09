@@ -58,11 +58,16 @@ export default async function JefePage() {
         .select('id', { count: 'exact', head: true })
         .eq('estado', 'no_solucionado')
         .gte('updated_at', hoyInicio),
+      // !inner + filtros: la fila de technician_status se conserva al quitar el
+      // rol o desactivar la cuenta, así que aquí se excluyen ex-técnicos y
+      // técnicos desactivados.
       supabase
         .from('technician_status')
         .select(
-          'tecnico_id, estado, ubicacion, atendiendo_solicitud_id, updated_at, profiles!tecnico_id(username)',
+          'tecnico_id, estado, ubicacion, atendiendo_solicitud_id, updated_at, profiles!tecnico_id!inner(username, rol, activo)',
         )
+        .eq('profiles.rol', 'tecnico')
+        .eq('profiles.activo', true)
         .order('tecnico_id', { ascending: true }),
     ])
 

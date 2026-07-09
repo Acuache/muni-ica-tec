@@ -136,7 +136,7 @@ y nada automático ocurre a las 14:30. No hay horario configurable ni feriados (
 ### Modelo de datos (resumen; la verdad está en `supabase/migrations/`)
 
 - **Enums:** `user_role` (jefe/tecnico/trabajador), `solicitud_estado`
-  (en_espera/en_proceso/solucionado/no_solucionado), `tecnico_estado`
+  (en_espera/en_proceso/solucionado/no_solucionado/cancelado), `tecnico_estado`
   (disponible/atendiendo/en_oficina/virtual/descanso), `ayuda_tipo` (presencial/virtual).
 - **`profiles`** (1:1 con `auth.users` vía trigger `handle_new_user`), **`solicitudes`**,
   **`technician_status`** (solo técnicos).

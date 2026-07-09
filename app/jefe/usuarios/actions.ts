@@ -313,6 +313,36 @@ async function hayOtroJefeActivo(admin: AdminClient, userId: string): Promise<bo
   return (count ?? 0) > 0
 }
 
+/**
+ * Devuelve a la cola la solicitud que el técnico tenga en atención y libera su
+ * technician_status. Necesario al desactivar la cuenta o al quitarle el rol
+ * técnico: sin esto la solicitud quedaría asignada a una cuenta que ya no puede
+ * atenderla (el jefe no puede cancelar una en_proceso) y la fila de estado
+ * figuraría "atendiendo" para siempre.
+ */
+async function liberarAtencionDeTecnico(
+  admin: AdminClient,
+  tecnicoId: string,
+): Promise<{ ok: boolean }> {
+  const { error: solError } = await admin
+    .from('solicitudes')
+    .update({
+      estado: 'en_espera',
+      tecnico_id: null,
+      confirmacion_trabajador: false,
+      confirmacion_tecnico: false,
+    })
+    .eq('tecnico_id', tecnicoId)
+    .eq('estado', 'en_proceso')
+  if (solError) return { ok: false }
+
+  const { error: tsError } = await admin
+    .from('technician_status')
+    .update({ estado: 'descanso', atendiendo_solicitud_id: null })
+    .eq('tecnico_id', tecnicoId)
+  return { ok: !tsError }
+}
+
 export type EditarUsuarioState = { ok: true } | { ok: false; error: string } | undefined
 
 /**
@@ -403,6 +433,31 @@ export async function editarUsuario(
       return { ok: false, error: 'El puesto seleccionado no es válido.' }
     }
     return { ok: false, error: 'No se pudieron guardar los cambios. Inténtalo de nuevo.' }
+  }
+
+  // El proxy enruta por user_metadata.rol: sin esta sincronización, un cambio
+  // de rol deja metadata y profiles.rol en conflicto y la cuenta cae en un
+  // loop de redirects entre paneles (ERR_TOO_MANY_REDIRECTS).
+  const { error: metaError } = await admin.auth.admin.updateUserById(userId, {
+    user_metadata: { rol, username },
+  })
+  if (metaError) {
+    return {
+      ok: false,
+      error: 'Se guardó el perfil, pero no se pudo sincronizar el rol de acceso. Guarda de nuevo.',
+    }
+  }
+
+  // Al dejar el rol técnico, devolver su caso en atención a la cola y liberar
+  // su fila de estado.
+  if (actualTyped.rol === 'tecnico' && rol !== 'tecnico') {
+    const { ok: liberado } = await liberarAtencionDeTecnico(admin, userId)
+    if (!liberado) {
+      return {
+        ok: false,
+        error: 'Se guardó el perfil, pero no se pudo liberar la solicitud que atendía. Guarda de nuevo.',
+      }
+    }
   }
 
   // Al pasar a técnico, asegurar su fila en technician_status (si no existe).
@@ -501,6 +556,15 @@ export async function desactivarUsuario({
     .in('estado', ['en_espera', 'en_proceso'])
   if (cancelError) {
     return { ok: false, error: 'No se pudo cancelar la solicitud activa. Inténtalo de nuevo.' }
+  }
+
+  // Si es un técnico con un caso en atención, devolverlo a la cola y liberar
+  // su fila de estado antes del ban.
+  if (actualTyped.rol === 'tecnico') {
+    const { ok: liberado } = await liberarAtencionDeTecnico(admin, userId)
+    if (!liberado) {
+      return { ok: false, error: 'No se pudo liberar la solicitud que atendía. Inténtalo de nuevo.' }
+    }
   }
 
   // Soft-delete.

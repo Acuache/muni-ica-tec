@@ -1,6 +1,11 @@
 # SPEC 07c — Trabajador: la card de resolución muestra el técnico asignado
 
-> **Estado:** Implementado · **Depende de:** SPEC 05 · **Fecha:** 2026-06-08
+> **Estado:** Reemplazado por SPEC 15 · **Depende de:** SPEC 05 · **Fecha:** 2026-06-08
+>
+> ⚠️ **Superseded:** SPEC 15 (Cambio 1) revirtió este comportamiento a propósito:
+> el trabajador ya **no** ve el nombre del técnico; ve el aviso fijo
+> "Un técnico ya está atendiendo tu caso" (máx. 20 min). Este spec queda solo
+> como registro histórico.
 > **Objetivo:** Que la card "¿Se ha resuelto el problema?" del trabajador muestre
 > el nombre del técnico que tomó su caso ("El caso fue tomado por el técnico
 > **{username}**") en lugar de pedirle que lo seleccione de un dropdown,

@@ -41,14 +41,19 @@ Fase 1 — MVP
                      └─ 06 Técnico: cola y atención        (usa 02, 03, 05)
                             └─ 07 Jefe: panel de control   (usa 02, 03, 05, 06)
 
-Fase 2 — Avanzado
-  08 Historial + exportación        (usa 07)
-  09 Notificaciones                 (usa 05, 06, 07)
-  10 Tiempo real (opcional/futuro)  (usa 06, 07)
+Fase 2 — implementada con otra numeración (ver nota abajo)
+  08 Doble confirmación · 08b Cierre del jefe · 09 Reportes mensuales (PDF)
+  10 Auditoría · 11 Optimización · 12 Adjuntos · 13 Catálogo de ubicación
+  14 Gestión de usuarios · 15 Ajustes de flujo · 16 Mejoras de búsqueda
+
+Pendiente (specs futuros)
+  Notificaciones                 (usa 05, 06, 07)
+  Tiempo real (opcional/futuro)  (usa 06, 07)
 ```
 
-Orden recomendado para correr `/spec`: **01 → 02 → 03 → 04 → 05 → 06 → 07**, y luego
-**08 / 09** cuando el MVP esté en pie. El 10 solo si decides reemplazar el polling.
+Orden recomendado para correr `/spec`: **01 → 02 → 03 → 04 → 05 → 06 → 07** (ya
+hechos, igual que 07b–07g y 08–16). Quedan como futuros **Notificaciones** y
+**Tiempo real**.
 
 ---
 
@@ -154,15 +159,16 @@ Orden recomendado para correr `/spec`: **01 → 02 → 03 → 04 → 05 → 06 �
 
 # Fase 2 — Avanzado (después del MVP)
 
-## SPEC 08 — Historial y exportación
+> **Nota (2026-07):** la numeración real divergió de este borrador. Los specs
+> 08–16 que existen en `specs/` son otros (08 doble confirmación, 08b cierre no
+> bloqueante del jefe, 09 reportes mensuales PDF, 10 auditoría, 11 optimización,
+> 12 adjuntos, 13 catálogo de ubicación, 14 gestión de usuarios, 15 ajustes de
+> flujo, 16 mejoras de búsqueda) y ya están implementados. El "Historial y
+> exportación" planificado aquí quedó cubierto por 08/08b (tabla completa del
+> jefe) y 09 (reportes PDF). De esta fase siguen pendientes únicamente los dos
+> specs de abajo; cuando se escriban, tomarán el siguiente número libre (17+).
 
-- **Objetivo (1 frase):** dar al jefe un historial filtrable y exportable de las
-  solicitudes atendidas.
-- **Incluye:** tabla "Historial Reciente" (fecha, área, técnico, resultado); filtros;
-  exportación (CSV como base).
-- **Depende de:** 07.
-
-## SPEC 09 — Notificaciones
+## SPEC futuro — Notificaciones
 
 - **Objetivo (1 frase):** avisar a cada rol de los eventos que le importan mediante la
   campana de la barra superior.
@@ -170,7 +176,7 @@ Orden recomendado para correr `/spec`: **01 → 02 → 03 → 04 → 05 → 06 �
   asignación (trabajador), resolución (jefe).
 - **Depende de:** 05, 06, 07.
 
-## SPEC 10 — Tiempo real (opcional / futuro)
+## SPEC futuro — Tiempo real (opcional)
 
 - **Objetivo (1 frase):** reemplazar el polling por suscripciones de Supabase Realtime.
 - **Incluye:** cola, estado de técnicos y KPIs en vivo sin recargar.

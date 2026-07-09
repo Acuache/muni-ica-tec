@@ -50,9 +50,9 @@ export default async function JefeUsuariosBuscarPage({
   const sedeSeleccionada = (sedeParam ?? '').trim()
   const modoSede = sedeSeleccionada !== ''
   // Los dos modos son excluyentes: en modo sede se ignora la búsqueda por texto.
-  // Se retiran , ( ) % del término: son separadores/comodines en la sintaxis
-  // de .or() de PostgREST y romperían el filtro (SPEC 16).
-  const q = modoSede ? '' : (qParam ?? '').replace(/[,()%]/g, '').trim()
+  // Se retiran , ( ) % _ del término: son separadores/comodines en la sintaxis
+  // de .or() de PostgREST o comodines de ilike y romperían el filtro (SPEC 16).
+  const q = modoSede ? '' : (qParam ?? '').replace(/[,()%_]/g, '').trim()
   const pageNum = parseInt(pageParam ?? '1', 10)
   const paginaActual = Number.isNaN(pageNum) ? 1 : Math.max(1, pageNum)
 
@@ -121,11 +121,16 @@ export default async function JefeUsuariosBuscarPage({
   const ids = filas.map((f) => f.id)
   let conSolicitudActiva = new Set<string>()
   if (ids.length > 0) {
-    const { data: solRows } = await supabase
+    const { data: solRows, error: solError } = await supabase
       .from('solicitudes')
       .select('trabajador_id')
       .in('trabajador_id', ids)
       .in('estado', ['en_espera', 'en_proceso'])
+    // Si falla, el modal de desactivar omitiría el aviso de cancelación de la
+    // solicitud activa: mejor cortar que avisar de menos.
+    if (solError) {
+      throw new Error('No se pudieron cargar los usuarios. Recarga la página.')
+    }
     conSolicitudActiva = new Set((solRows ?? []).map((r) => r.trabajador_id as string))
   }
 

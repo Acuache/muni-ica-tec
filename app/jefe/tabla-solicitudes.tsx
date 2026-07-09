@@ -43,10 +43,12 @@ const ESTADO_BADGE: Record<string, { label: string; className: string }> = {
   cancelado:      { label: 'Cancelado',      className: 'bg-gray-100 text-gray-600' },
 }
 
+// timeZone fija: corre en el navegador y sin ella la fecha saldría en la zona
+// del cliente, no en la hora de Lima que usa toda la app.
 function formatFecha(iso: string): string {
   const d = new Date(iso)
-  const fecha = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit' })
-  const hora  = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+  const fecha = d.toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: '2-digit' })
+  const hora  = d.toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' })
   return `${fecha} ${hora}`
 }
 

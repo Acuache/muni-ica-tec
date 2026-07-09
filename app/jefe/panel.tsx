@@ -227,5 +227,8 @@ function formatTiempoAct(updatedAt: string): string {
   const seg = Math.floor(ms / 1000)
   if (seg < 60) return `${seg}s act.`
   const min = Math.floor(seg / 60)
-  return `${min}m act.`
+  if (min < 60) return `${min}m act.`
+  const horas = Math.floor(min / 60)
+  if (horas < 24) return `${horas}h act.`
+  return `${Math.floor(horas / 24)}d act.`
 }
