@@ -128,4 +128,8 @@
   html {
     @apply font-serif;
   }
+  /* Tailwind v4 quitó cursor:pointer de los botones en su preflight (SPEC 16). */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
 }

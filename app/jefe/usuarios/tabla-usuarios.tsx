@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Paginacion from '@/components/paginacion'
 import SelectsUbicacion, {
   type Sede,
   type Area,
@@ -101,6 +102,9 @@ export default function TablaUsuarios({
 }) {
   const router = useRouter()
   const [busqueda, setBusqueda] = useState(q)
+  // Feedback de carga (SPEC 16): mientras la navegación está en vuelo, la tabla
+  // se atenúa con un spinner y los controles se deshabilitan.
+  const [cargando, startTransition] = useTransition()
   const modoSede = sedeSeleccionada !== ''
   const catalogo: Catalogo = { sedes, areas, subareas }
 
@@ -120,7 +124,9 @@ export default function TablaUsuarios({
     }
 
     if (incFinal) p.set('incluirDesactivados', 'true')
-    router.push(`?${p.toString()}`)
+    startTransition(() => {
+      router.push(`?${p.toString()}`)
+    })
   }
 
   function handleBuscar(e: React.FormEvent) {
@@ -151,12 +157,14 @@ export default function TablaUsuarios({
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o apellido…"
-              className="w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+              disabled={cargando}
+              placeholder="Buscar por nombre o correo…"
+              className="w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
             />
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              disabled={cargando}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Buscar
             </button>
@@ -165,7 +173,8 @@ export default function TablaUsuarios({
           <select
             value={sedeSeleccionada}
             onChange={handleSedeChange}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+            disabled={cargando}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
           >
             <option value="">— Filtrar por sede —</option>
             {sedes.map((s) => (
@@ -180,6 +189,7 @@ export default function TablaUsuarios({
               type="checkbox"
               checked={incluirDesactivados}
               onChange={handleToggle}
+              disabled={cargando}
               className="rounded border-gray-300"
             />
             Mostrar desactivados
@@ -187,47 +197,63 @@ export default function TablaUsuarios({
         </div>
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        {usuarios.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-gray-400">No hay usuarios.</p>
-        ) : (
-          <table className="w-full min-w-[900px] text-xs">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className={thBase}>Nombre</th>
-                <th className={thBase}>Correo</th>
-                <th className={thBase}>Teléfono</th>
-                <th className={thBase}>Rol</th>
-                <th className={thBase}>Sede / Área / Subárea / Puesto</th>
-                <th className={thBase}>Estado</th>
-                <th className={thBase}>Acciones</th>
-              </tr>
-            </thead>
+      {/* Tabla. Mientras carga la navegación se atenúa con un spinner encima,
+          sin salto de layout (el contenido anterior conserva su espacio). */}
+      <div className="relative">
+        {cargando && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div
+              className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"
+              role="status"
+              aria-label="Cargando…"
+            />
+          </div>
+        )}
+        <div
+          className={`overflow-x-auto rounded-xl border border-gray-200 bg-white transition-opacity ${
+            cargando ? 'pointer-events-none opacity-50' : ''
+          }`}
+        >
+          {usuarios.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-gray-400">No hay usuarios.</p>
+          ) : (
+            <table className="w-full min-w-[900px] text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className={thBase}>Nombre</th>
+                  <th className={thBase}>Correo</th>
+                  <th className={thBase}>Teléfono</th>
+                  <th className={thBase}>Rol</th>
+                  <th className={thBase}>Sede / Área / Subárea / Puesto</th>
+                  <th className={thBase}>Estado</th>
+                  <th className={thBase}>Acciones</th>
+                </tr>
+              </thead>
 
-            {modoSede ? (
-              // Modo sede: una subsección (tbody) por área.
-              grupos.map(([area, filas]) => (
-                <tbody key={area} className="divide-y divide-gray-100">
-                  <tr className="border-t border-gray-100 bg-gray-50">
-                    <td colSpan={7} className="px-3 py-1.5 text-xs font-semibold text-gray-600">
-                      {area}
-                    </td>
-                  </tr>
-                  {filas.map((u) => (
+              {modoSede ? (
+                // Modo sede: una subsección (tbody) por área.
+                grupos.map(([area, filas]) => (
+                  <tbody key={area} className="divide-y divide-gray-100">
+                    <tr className="border-t border-gray-100 bg-gray-50">
+                      <td colSpan={7} className="px-3 py-1.5 text-xs font-semibold text-gray-600">
+                        {area}
+                      </td>
+                    </tr>
+                    {filas.map((u) => (
+                      <FilaUsuario key={u.id} usuario={u} catalogo={catalogo} />
+                    ))}
+                  </tbody>
+                ))
+              ) : (
+                <tbody className="divide-y divide-gray-100">
+                  {usuarios.map((u) => (
                     <FilaUsuario key={u.id} usuario={u} catalogo={catalogo} />
                   ))}
                 </tbody>
-              ))
-            ) : (
-              <tbody className="divide-y divide-gray-100">
-                {usuarios.map((u) => (
-                  <FilaUsuario key={u.id} usuario={u} catalogo={catalogo} />
-                ))}
-              </tbody>
-            )}
-          </table>
-        )}
+              )}
+            </table>
+          )}
+        </div>
       </div>
 
       {/* Paginación: solo en modo texto (en modo sede no se pagina). */}
@@ -236,24 +262,12 @@ export default function TablaUsuarios({
           <span className="text-xs text-gray-500">
             Página {paginaActual} de {totalPaginas}
           </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => navegar({ q, page: paginaActual - 1 })}
-              disabled={paginaActual <= 1}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              onClick={() => navegar({ q, page: paginaActual + 1 })}
-              disabled={paginaActual >= totalPaginas}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Siguiente
-            </button>
-          </div>
+          <Paginacion
+            paginaActual={paginaActual}
+            totalPaginas={totalPaginas}
+            onPageChange={(pagina) => navegar({ q, page: pagina })}
+            disabled={cargando}
+          />
         </div>
       )}
     </div>

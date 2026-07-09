@@ -50,7 +50,9 @@ export default async function JefeUsuariosBuscarPage({
   const sedeSeleccionada = (sedeParam ?? '').trim()
   const modoSede = sedeSeleccionada !== ''
   // Los dos modos son excluyentes: en modo sede se ignora la búsqueda por texto.
-  const q = modoSede ? '' : (qParam ?? '').trim()
+  // Se retiran , ( ) % del término: son separadores/comodines en la sintaxis
+  // de .or() de PostgREST y romperían el filtro (SPEC 16).
+  const q = modoSede ? '' : (qParam ?? '').replace(/[,()%]/g, '').trim()
   const pageNum = parseInt(pageParam ?? '1', 10)
   const paginaActual = Number.isNaN(pageNum) ? 1 : Math.max(1, pageNum)
 
@@ -100,8 +102,10 @@ export default async function JefeUsuariosBuscarPage({
       countQuery = countQuery.eq('activo', true)
     }
     if (q) {
-      listaQuery = listaQuery.ilike('username', `%${q}%`)
-      countQuery = countQuery.ilike('username', `%${q}%`)
+      // Coincidencia parcial por nombre O correo desde la misma caja (SPEC 16).
+      const filtro = `username.ilike.%${q}%,email.ilike.%${q}%`
+      listaQuery = listaQuery.or(filtro)
+      countQuery = countQuery.or(filtro)
     }
 
     const [listaResult, countResult] = await Promise.all([listaQuery, countQuery])
